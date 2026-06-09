@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Juego de Habilidades equipo CMG</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page-container">
+    <header>
+      <div class="header-top">
+        <h1>⚡ Juego de Habilidades CMG</h1>
+      </div>
+      <p>Desafía tus Habilidades </p>
+    </header>
+
+    <section class="cards">
+      <article class="card quick-guide">
+        <h3>🎮 Cómo empezar</h3>
+        <ol>
+          <li>Agrega jugadores en el cuadro izquierdo</li>
+          <li>Selecciona categoría en el <strong>TABLERO</strong> (arriba a la derecha)</li>
+          <li>Usa <strong>flechas</strong> para navegar o <strong>haz clic</strong></li>
+          <li>Presiona <strong>Enter</strong> para abrir desafío</li>
+          <li>¡Responde y compite!</li>
+        </ol>
+      </article>
+      <article class="card">
+        <h3>🎯 16 Categorías</h3>
+        <p>⌨ Mecanografía • 📊 Excel • 🎬 Películas • ∑ Fórmulas • ⚽ Fútbol • 💻 Código • 🏃 Agilidad • 🐍 Python • 🦁 Animales • 🎯 Habilidades • ✨ JavaScript • 👑 Liderazgo • 💼 Negocios • 🎵 Música • 🎭 Cultura</p>
+      </article>
+    </section>
+
+    <section class="input-section">
+      <div class="box players-box">
+        <h2>👥 Tu Equipo</h2>
+        <div class="row">
+          <input id="playerName" type="text" placeholder="Nombre del jugador..." />
+          <button id="addPlayerBtn">+</button>
+        </div>
+        <ul id="playerList" class="player-list"></ul>
+      </div>
+
+      <div class="box">
+        <h2>📺 Modo Espectador</h2>
+        <p style="color: #94a3b8; margin: 8px 0; font-size: 0.95rem;">Abre una pantalla para que el equipo vea el leaderboard en vivo mientras compiten.</p>
+        <button id="spectatorBtnMain" class="primary-btn" style="background: linear-gradient(120deg, #10b981, #059669);">🔴 Comenzar transmisión</button>
+      </div>
+    </section>
+
+    <section class="status-section">
+      <div class="box scoreboard-box">
+        <h2>Marcador del equipo</h2>
+        <label for="activePlayerSelect">Jugador activo</label>
+        <select id="activePlayerSelect" class="player-select">
+          <option value="">Selecciona jugador activo</option>
+        </select>
+        <div id="scoreboard" class="scoreboard"></div>
+        <div id="leaderboard" class="leaderboard"></div>
+      </div>
+      <div class="box board-box">
+        <h2>Tablero del juego</h2>
+        <div id="gameBoard" class="game-board"></div>
+        <p class="board-hint">Usa las flechas del teclado o haz clic en un casillero, luego presiona Enter para abrir el desafío.</p>
+      </div>
+    </section>
+
+    <section id="challengeSection" class="challenge-section hidden">
+      <div class="box challenge-box">
+        <h2 id="challengeTitle">Desafío</h2>
+        <div id="challengeContent"></div>
+        <button id="submitAnswersBtn" class="primary-btn">Enviar respuestas</button>
+      </div>
+      <div class="box results-box hidden" id="resultsBox">
+        <h2>Resultados</h2>
+        <p id="resultsText"></p>
+        <button id="resetBtn">Reiniciar desafío</button>
+      </div>
+    </section>
+
+    <footer>
+      <p>⚡ Hecha por JFORE18</p>
+    </footer>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

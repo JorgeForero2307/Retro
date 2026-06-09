@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pantalla de Espectador - Juego de Habilidades</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #111827;
+      --accent: #38bdf8;
+      --text: #f8fafc;
+      --gold: #fbbf24;
+      --silver: #d1d5db;
+      --bronze: #d97706;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .spectator-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .spectator-header {
+      text-align: center;
+      margin-bottom: 30px;
+      animation: slideDown 0.6s ease;
+    }
+
+    .spectator-header h1 {
+      font-size: 3.5rem;
+      margin-bottom: 10px;
+      background: linear-gradient(120deg, var(--accent), #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .spectator-header p {
+      font-size: 1.2rem;
+      color: #cbd5e1;
+    }
+
+    .leaderboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      flex: 1;
+    }
+
+    .leaderboard-card {
+      background: rgba(30, 41, 59, 0.95);
+      border: 2px solid var(--accent);
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      transform: translateY(0);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      animation: popIn 0.6s ease;
+    }
+
+    .leaderboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 25px 60px rgba(56, 189, 248, 0.2);
+    }
+
+    .leaderboard-card h2 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .leaderboard-list {
+      list-style: none;
+    }
+
+    .leaderboard-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      font-size: 1.1rem;
+      animation: slideRight 0.6s ease;
+    }
+
+    .leaderboard-item:last-child {
+      border-bottom: none;
+    }
+
+    .leaderboard-item.winner {
+      background: linear-gradient(90deg, rgba(251, 191, 36, 0.1), transparent);
+      padding: 12px;
+      border-radius: 10px;
+      margin: 0 -12px;
+      padding-left: 12px;
+    }
+
+    .medal {
+      font-size: 1.8rem;
+      width: 50px;
+      display: inline-block;
+    }
+
+    .player-info {
+      flex: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .player-name {
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+
+    .player-stats {
+      display: flex;
+      gap: 15px;
+      font-weight: 700;
+    }
+
+    .stat-box {
+      background: rgba(56, 189, 248, 0.1);
+      padding: 8px 14px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      display: block;
+    }
+
+    .stat-value {
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+    }
+
+    .empty-state h3 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    .sync-indicator {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(16, 185, 129, 0.9);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+      animation: pulse 1s infinite;
+    }
+
+    .sync-indicator.active {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideRight {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.7;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .spectator-header h1 {
+        font-size: 2rem;
+      }
+
+      .leaderboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .player-stats {
+        flex-direction: column;
+        gap: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="spectator-container">
+    <div class="spectator-header">
+      <h1>🏆 LEADERBOARD EN VIVO</h1>
+      <p>Sigue el ranking de tu equipo en tiempo real</p>
+    </div>
+
+    <div id="leaderboardGrid" class="leaderboard-grid"></div>
+  </div>
+
+  <div id="syncIndicator" class="sync-indicator">🔄 Sincronizando...</div>
+
+  <script>
+    const leaderboardGrid = document.getElementById('leaderboardGrid');
+    const syncIndicator = document.getElementById('syncIndicator');
+
+    function renderSpectator() {
+      const gameData = localStorage.getItem('gameData');
+      const players = gameData ? JSON.parse(gameData) : [];
+
+      if (players.length === 0) {
+        leaderboardGrid.innerHTML = `<div class="empty-state"><h3>📍 Esperando jugadores...</h3><p>Los jugadores aparecerán aquí cuando se unan al juego</p></div>`;
+        return;
+      }
+
+      const sorted = [...players].sort((a, b) => b.totalPoints - a.totalPoints);
+      const medals = ['🥇', '🥈', '🥉'];
+      const colors = ['gold', 'silver', 'bronze'];
+
+      let html = `<div class="leaderboard-card">
+        <h2>👥 Ranking General</h2>
+        <ul class="leaderboard-list">`;
+
+      sorted.slice(0, 10).forEach((player, idx) => {
+        const isWinner = idx === 0;
+        html += `
+          <li class="leaderboard-item ${isWinner ? 'winner' : ''}">
+            <span class="medal">${medals[idx] || '·'}</span>
+            <div class="player-info">
+              <span class="player-name">#${idx + 1} ${player.name}</span>
+              <div class="player-stats">
+                <div class="stat-box">
+                  <span class="stat-label">Puntos</span>
+                  <span class="stat-value">${player.totalPoints}</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-label">Respuestas</span>
+                  <span class="stat-value">${player.totalAnswers}</span>
+                </div>
+              </div>
+            </div>
+          </li>`;
+      });
+
+      html += `</ul></div>`;
+
+      // Estadísticas especiales
+      if (sorted.length > 0) {
+        const topScore = sorted[0];
+        const topAnswers = [...players].reduce((a, b) => a.totalAnswers > b.totalAnswers ? a : b);
+        const avgScore = Math.round(players.reduce((a, b) => a + b.totalPoints, 0) / players.length);
+
+        html += `<div class="leaderboard-card">
+          <h2>📊 Estadísticas</h2>
+          <ul class="leaderboard-list">
+            <li class="leaderboard-item">
+              <span style="font-size: 2rem; width: 50px;">🏆</span>
+              <div class="player-info">
+                <span class="player-name">Líder de Puntos</span>
+                <span class="stat-value">${topScore.name}</span>
+              </div>
+            </li>
+            <li class="leaderboard-item">
+              <span style="font-size: 2rem; width: 50px;">💬</span>
+              <div class="player-info">
+                <span class="player-name">Más Participación</span>
+                <span class="stat-value">${topAnswers.name}</span>
+              </div>
+            </li>
+            <li class="leaderboard-item">
+              <span style="font-size: 2rem; width: 50px;">📈</span>
+              <div class="player-info">
+                <span class="player-name">Promedio del Equipo</span>
+                <span class="stat-value">${avgScore}p</span>
+              </div>
+            </li>
+          </ul>
+        </div>`;
+      }
+
+      leaderboardGrid.innerHTML = html;
+    }
+
+    function syncAndRefresh() {
+      syncIndicator.classList.add('active');
+      setTimeout(() => {
+        renderSpectator();
+        syncIndicator.classList.remove('active');
+      }, 500);
+    }
+
+    // Actualizar cada 2 segundos
+    setInterval(syncAndRefresh, 2000);
+
+    // Renderizar inicialmente
+    renderSpectator();
+  </script>
+</body>
+</html>
