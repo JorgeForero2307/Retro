@@ -2,7 +2,7 @@
   "name": "juego-habilidades",
   "version": 2,
   "buildCommand": "echo 'Sitio estático - no requiere build'",
-  "public": true,
+  "outputDirectory": "public",
   "headers": [
     {
       "source": "/(.+)",
