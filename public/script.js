@@ -664,7 +664,45 @@ function setupRoomListeners() {
 
     // Renderizar entregas de la ronda
     renderRoundSubmissions(subs);
+
+    // Controlar visibilidad y estado del botón "Siguiente Ronda" (resetBtn)
+    if (isMultiplayerActive) {
+      if (isHost) {
+        resetBtn.classList.remove('hidden');
+        const ready = canAdvanceRound(subs);
+        if (ready) {
+          resetBtn.disabled = false;
+          resetBtn.style.opacity = '1';
+          resetBtn.style.cursor = 'pointer';
+          resetBtn.textContent = "Siguiente Ronda";
+        } else {
+          resetBtn.disabled = true;
+          resetBtn.style.opacity = '0.5';
+          resetBtn.style.cursor = 'not-allowed';
+          resetBtn.textContent = "Siguiente Ronda (Esperando respuestas...)";
+        }
+      } else {
+        resetBtn.classList.add('hidden');
+      }
+    } else {
+      resetBtn.classList.remove('hidden');
+      resetBtn.disabled = false;
+      resetBtn.style.opacity = '1';
+      resetBtn.style.cursor = 'pointer';
+      resetBtn.textContent = "Siguiente Ronda";
+    }
   });
+}
+
+function canAdvanceRound(submissions) {
+  if (!isMultiplayerActive) return true;
+  
+  // Jugadores en línea (excluyendo desconectados)
+  const onlinePlayers = players.filter(p => p.online !== false);
+  if (onlinePlayers.length === 0) return true;
+  
+  const subs = submissions || {};
+  return onlinePlayers.every(p => subs[p.name]);
 }
 
 function renderRoundSubmissions(submissions) {
@@ -767,6 +805,7 @@ submitAnswersBtn.addEventListener('click', scoreAnswers);
 
 resetBtn.addEventListener('click', () => {
   if (isMultiplayerActive) {
+    if (!isHost) return;
     database.ref(`rooms/${roomId}/gameState`).set({
       challengeActive: false,
       currentCategory: '',
