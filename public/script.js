@@ -61,6 +61,9 @@ const firebaseConfig = {
   appId: "1:51894964862:web:43d30b9a1e5db4619e3e2f"
 };
 let firebaseRefs = {};
+let isHost = false;
+let roomOwner = '';
+const closeRoomBtn = document.getElementById('closeRoomBtn');
 
 // TABLERO 4x4 CON 16 CATEGORÍAS
 const boardLayout = [
@@ -70,129 +73,7 @@ const boardLayout = [
   ['liderazgo', 'negocios', 'musica', 'cultura']
 ];
 
-// BASE DE DATOS DE PREGUNTAS - 16 CATEGORÍAS
-const questionDatabase = {
-  mecanografia: [
-    { type: 'typing', text: 'El equipo aprende rápido y trabaja con entusiasmo constante.' },
-    { type: 'typing', text: 'La transformación digital impulsa el éxito empresarial moderno.' },
-    { type: 'typing', text: 'Mecanografía rápida y precisa aumenta la productividad diaria.' },
-    { type: 'typing', text: 'Practicar escritura es fundamental para dominar cualquier idioma.' },
-    { type: 'typing', text: 'Los errores de tipeo pueden alterar el significado del mensaje.' },
-    { type: 'typing', text: 'La velocidad en escritura es una habilidad profesional esencial.' }
-  ],
-  excel: [
-    { type: 'choice', label: '¿Cuál es la fórmula para sumar A1:A5?', options: ['=SUMA(A1:A5)', '=SUM(A1,A5)', '=A1+A5', '=TOTAL(A1:A5)'], answer: '=SUMA(A1:A5)' },
-    { type: 'choice', label: '¿Qué atajo copia el contenido?', options: ['Ctrl + V', 'Ctrl + C', 'Ctrl + Z', 'Ctrl + S'], answer: 'Ctrl + C' },
-    { type: 'text', label: 'Escribe la fórmula para el máximo de B2:B10.', answer: 'MAX' },
-    { type: 'choice', label: '¿Cuál es el atajo para pegar?', options: ['Ctrl + A', 'Ctrl + X', 'Ctrl + V', 'Ctrl + Z'], answer: 'Ctrl + V' },
-    { type: 'choice', label: '¿Qué función calcula el promedio?', options: ['SUMA', 'PROMEDIO', 'MAX', 'CONTAR'], answer: 'PROMEDIO' },
-    { type: 'text', label: 'Escribe una fórmula para contar células no vacías.', answer: 'COUNTA' }
-  ],
-  formulas: [
-    { type: 'choice', label: 'Si x=5 y y=3, ¿cuánto vale 2x+y?', options: ['10', '11', '13', '7'], answer: '13' },
-    { type: 'choice', label: '¿Cuál es 12/4+3?', options: ['6', '0', '5', '10'], answer: '6' },
-    { type: 'text', label: 'Escribe la fórmula del área de un rectángulo.', answer: 'base' },
-    { type: 'choice', label: 'Si a=2 y b=3, ¿cuánto vale 3a+2b?', options: ['12', '13', '11', '14'], answer: '12' },
-    { type: 'choice', label: '¿Cuál es 15% de 200?', options: ['30', '20', '40', '25'], answer: '30' },
-    { type: 'text', label: 'Si área=50 y base=10, ¿cuál es la altura?', answer: '5' }
-  ],
-  peliculas: [
-    { type: 'choice', label: '¿Quién dirigió La Guerra de las Galaxias?', options: ['Christopher Nolan', 'Steven Spielberg', 'George Lucas', 'Peter Jackson'], answer: 'George Lucas' },
-    { type: 'choice', label: '¿Cuál serie pertenece a Marvel?', options: ['Stranger Things', 'Loki', 'Breaking Bad', 'The Crown'], answer: 'Loki' },
-    { type: 'text', label: 'Película: arqueólogo busca el Arca Perdida.', answer: 'Indiana Jones' },
-    { type: 'choice', label: '¿En qué año se estrenó Avatar?', options: ['2007', '2008', '2009', '2010'], answer: '2009' },
-    { type: 'choice', label: '¿Quién dirigió Titanic?', options: ['Steven Spielberg', 'James Cameron', 'Christopher Nolan', 'Denis Villeneuve'], answer: 'James Cameron' },
-    { type: 'text', label: 'Actor que juega Spider-Man en el MCU.', answer: 'Tom Holland' }
-  ],
-  futbol: [
-    { type: 'choice', label: '¿Cuántos jugadores tiene un equipo de fútbol?', options: ['10', '11', '12', '13'], answer: '11' },
-    { type: 'choice', label: '¿Cuánto dura un partido de fútbol?', options: ['60 minutos', '80 minutos', '90 minutos', '120 minutos'], answer: '90 minutos' },
-    { type: 'text', label: '¿Quién ganó el Balón de Oro 2023?', answer: 'Messi' },
-    { type: 'choice', label: '¿Cuál NO es un torneo importante?', options: ['Champions League', 'Copa Mundial', 'Amistoso', 'Eurocopa'], answer: 'Amistoso' },
-    { type: 'choice', label: '¿Cuántos equipos hay en una liga profesional típica?', options: ['16', '18', '20', '22'], answer: '20' },
-    { type: 'text', label: 'Equipo con más Championes League: Real Madrid o Liverpool.', answer: 'Real Madrid' }
-  ],
-  codigo: [
-    { type: 'choice', label: '¿Qué lenguaje es más usado en web?', options: ['Python', 'JavaScript', 'C++', 'Java'], answer: 'JavaScript' },
-    { type: 'text', label: 'Atajo para comentar línea en la mayoría de IDEs.', answer: 'Ctrl' },
-    { type: 'choice', label: '¿Qué es un bug?', options: ['Programa malicioso', 'Error en el código', 'Tipo de dato', 'Función especial'], answer: 'Error en el código' },
-    { type: 'choice', label: '¿Qué significa API?', options: ['Aplicación Pública', 'Interfaz de Programación', 'Archivo Principal', 'Acceso Público Ilimitado'], answer: 'Interfaz de Programación' },
-    { type: 'text', label: 'El proceso de corregir errores en código.', answer: 'debugging' },
-    { type: 'choice', label: '¿Cuál es la estructura básica de HTML?', options: ['<head>, <body>', '<html>, <head>, <body>', '<div>, <span>', '<p>, <a>'], answer: '<html>, <head>, <body>' }
-  ],
-  agilidad: [
-    { type: 'choice', label: '¿Qué es Scrum?', options: ['Un juego', 'Metodología ágil', 'Lenguaje de programación', 'Base de datos'], answer: 'Metodología ágil' },
-    { type: 'text', label: 'Reunión diaria de Scrum: Daily...', answer: 'standup' },
-    { type: 'choice', label: '¿Cuánto dura un Sprint típico?', options: ['1 semana', '2 semanas', '1 mes', '3 meses'], answer: '2 semanas' },
-    { type: 'choice', label: '¿Quién lidera un equipo Scrum?', options: ['Project Manager', 'Scrum Master', 'CEO', 'Director Técnico'], answer: 'Scrum Master' },
-    { type: 'text', label: 'Otra metodología ágil además de Scrum.', answer: 'Kanban' },
-    { type: 'choice', label: '¿Cuál es el objetivo del Daily Standup?', options: ['Reportes largos', 'Sincronización rápida', 'Revisión de código', 'Evaluación de desempeño'], answer: 'Sincronización rápida' }
-  ],
-  python: [
-    { type: 'choice', label: '¿Quién creó Python?', options: ['Guido van Rossum', 'Bjarne Stroustrup', 'Dennis Ritchie', 'Brendan Eich'], answer: 'Guido van Rossum' },
-    { type: 'text', label: 'Símbolo para comentar en Python.', answer: '#' },
-    { type: 'choice', label: '¿Para qué es ideal Python?', options: ['Juegos 3D', 'Data Science', 'Sistemas operativos', 'Aplicaciones móviles'], answer: 'Data Science' },
-    { type: 'choice', label: '¿Cuál es el índice inicial en Python?', options: ['1', '0', '-1', 'null'], answer: '0' },
-    { type: 'text', label: 'Tipo de datos para listas en Python.', answer: 'list' },
-    { type: 'choice', label: '¿Qué no es correcto en Python?', options: ['for i in range(10):', 'if x > 5:', 'while x = 10:', 'def funcion():'], answer: 'while x = 10:' }
-  ],
-  animales: [
-    { type: 'choice', label: '¿Cuál es el animal más rápido?', options: ['Gato', 'Guepardo', 'Águila', 'Pez espada'], answer: 'Guepardo' },
-    { type: 'text', label: '¿Cuántas patas tiene una araña?', answer: '8' },
-    { type: 'choice', label: '¿Dónde vive el pingüino?', options: ['Ártico', 'Antártida', 'Madagascar', 'Islas Galápagos'], answer: 'Antártida' },
-    { type: 'choice', label: '¿Cuál animal tiene el corazón más grande?', options: ['Elefante', 'Ballena azul', 'Jirafa', 'Oso polar'], answer: 'Ballena azul' },
-    { type: 'text', label: 'Animal que pone huevos pero es mamífero.', answer: 'ornitorrinco' },
-    { type: 'choice', label: '¿Cuál animal vive más años?', options: ['Loro', 'Tortuga', 'Humano', 'Ballena'], answer: 'Tortuga' }
-  ],
-  habilidades: [
-    { type: 'choice', label: '¿Cuál es habilidad blanda importante?', options: ['Mecanografía', 'Comunicación', 'Excel avanzado', 'Programación'], answer: 'Comunicación' },
-    { type: 'choice', label: '¿Qué busca información en Windows?', options: ['Explorador', 'Barra búsqueda', 'Calculadora', 'Bloc notas'], answer: 'Barra búsqueda' },
-    { type: 'text', label: 'Habilidad para trabajar efectivamente en equipo.', answer: 'colaboracion' },
-    { type: 'choice', label: '¿Habilidad más demandada en empleos?', options: ['Mecanografía', 'Pensamiento crítico', 'Dibujo', 'Música'], answer: 'Pensamiento crítico' },
-    { type: 'choice', label: '¿Qué genera la organización?', options: ['Caos', 'Estrés', 'Productividad', 'Pérdida de tiempo'], answer: 'Productividad' },
-    { type: 'text', label: 'Herramienta popular de gestión de tareas.', answer: 'Trello' }
-  ],
-  javascript: [
-    { type: 'choice', label: '¿Dónde se ejecuta JavaScript principalmente?', options: ['Servidor', 'Navegador', 'Móvil', 'Consola'], answer: 'Navegador' },
-    { type: 'text', label: 'Variable para crear en JavaScript: var, let o...', answer: 'const' },
-    { type: 'choice', label: '¿Cuál es la función para parsear JSON?', options: ['parse()', 'stringify()', 'format()', 'convert()'], answer: 'parse()' },
-    { type: 'choice', label: '¿Quién creó JavaScript?', options: ['Brendan Eich', 'Guido van Rossum', 'Denis Ritchie', 'Bjarne Stroustrup'], answer: 'Brendan Eich' },
-    { type: 'text', label: 'Evento que se dispara al hacer clic en un elemento.', answer: 'click' },
-    { type: 'choice', label: '¿Qué selecciona elementos por ID?', options: ['querySelector()', 'getElementById()', 'getElementByClass()', 'select()'], answer: 'getElementById()' }
-  ],
-  liderazgo: [
-    { type: 'choice', label: '¿Qué es liderazgo transformacional?', options: ['Dictar órdenes', 'Inspirar cambio', 'Sólo dar dirección', 'Controlar'], answer: 'Inspirar cambio' },
-    { type: 'text', label: 'Habilidad esencial para un líder.', answer: 'escucha' },
-    { type: 'choice', label: '¿Cuál NO es un estilo de liderazgo?', options: ['Autocrático', 'Democrático', 'Laissez-faire', 'Omnisciente'], answer: 'Omnisciente' },
-    { type: 'choice', label: '¿Cómo motiva un buen líder?', options: ['Con miedo', 'Por interés genuino', 'Amenazas', 'Castigos'], answer: 'Por interés genuino' },
-    { type: 'text', label: 'Capacidad de entender emociones propias y ajenas.', answer: 'inteligencia emocional' },
-    { type: 'choice', label: '¿Qué busca un líder coach?', options: ['Control total', 'Desarrollo del equipo', 'Poder personal', 'Autoridad absoluta'], answer: 'Desarrollo del equipo' }
-  ],
-  negocios: [
-    { type: 'choice', label: '¿Qué es ROI?', options: ['Retorno Operativo', 'Retorno sobre Inversión', 'Riesgo Operativo', 'Rentabilidad Oficial'], answer: 'Retorno sobre Inversión' },
-    { type: 'text', label: 'Estrategia: precio bajo, volumen alto.', answer: 'penetracion' },
-    { type: 'choice', label: '¿Cuál es el ciclo de vida del producto?', options: ['Introducción, crecimiento, madurez, declive', 'Inicio, desarrollo, cierre', 'Lanzamiento, pico, fin', 'Idea, producto, venta'], answer: 'Introducción, crecimiento, madurez, declive' },
-    { type: 'choice', label: '¿Qué significa FODA?', options: ['Fortalezas, Oportunidades, Debilidades, Amenazas', 'Finanzas, Operaciones, Datos, Activos', 'Función, Objetivo, Dirección, Análisis', 'Flujo, Orden, Decisión, Auditoría'], answer: 'Fortalezas, Oportunidades, Debilidades, Amenazas' },
-    { type: 'text', label: 'Estudio para conocer necesidades del cliente.', answer: 'mercado' },
-    { type: 'choice', label: '¿Cuál es el mejor precio?', options: ['El más bajo', 'El más alto', 'El que maximiza valor', 'Sin relación'], answer: 'El que maximiza valor' }
-  ],
-  musica: [
-    { type: 'choice', label: '¿Cuántas notas tiene la escala musical?', options: ['5', '7', '8', '12'], answer: '7' },
-    { type: 'text', label: '¿Quién compuso las Cuatro Estaciones?', answer: 'Vivaldi' },
-    { type: 'choice', label: '¿Qué instrumento es de viento?', options: ['Violín', 'Flauta', 'Batería', 'Piano'], answer: 'Flauta' },
-    { type: 'choice', label: '¿Cuántos elementos tiene un acorde tríada?', options: ['2', '3', '4', '5'], answer: '3' },
-    { type: 'text', label: 'Velocidad de una canción en música.', answer: 'tempo' },
-    { type: 'choice', label: '¿Cuál es el rango de un soprano?', options: ['Bajo', 'Tenor', 'Agudo', 'Barítono'], answer: 'Agudo' }
-  ],
-  cultura: [
-    { type: 'choice', label: '¿Cuál es el monumento más visitado del mundo?', options: ['Big Ben', 'Torre Eiffel', 'Gran Muralla China', 'Coliseo'], answer: 'Gran Muralla China' },
-    { type: 'text', label: 'País donde se originó el flamenco.', answer: 'España' },
-    { type: 'choice', label: '¿Quién pintó la Persistencia de la Memoria?', options: ['Dalí', 'Picasso', 'Miró', 'Gaudí'], answer: 'Dalí' },
-    { type: 'choice', label: '¿Cuál es la novela más leída del mundo?', options: ['Don Quijote', 'La Biblia', 'Harry Potter', 'Cien años de soledad'], answer: 'Don Quijote' },
-    { type: 'text', label: '¿En qué año se firmó la Declaración de Independencia de EE.UU.?', answer: '1776' },
-    { type: 'choice', label: '¿Cuál es la danza típica de Argentina?', options: ['Salsa', 'Tango', 'Samba', 'Flamenco'], answer: 'Tango' }
-  ]
-};
+
 
 function createPlayer(name) {
   return { name, totalPoints: 0, totalAnswers: 0, online: true };
@@ -216,32 +97,47 @@ function renderPlayers() {
     
     // Presencia online
     let presenceHtml = '';
+    const isMe = player.name === myPlayerName;
     if (isMultiplayerActive) {
       const isOnline = player.online !== false;
+      const isHostText = player.name === roomOwner ? ' 👑' : '';
       presenceHtml = `<span class="player-presence ${isOnline ? 'online' : 'offline'}" title="${isOnline ? 'En línea' : 'Desconectado'}"></span>`;
+      const isMeText = isMe ? ' <strong>(Tú)</strong>' : '';
+      li.innerHTML = `${presenceHtml}<span class="rank">${medals[idx] || '·'}</span><span>${player.name}${isMeText}${isHostText}</span><small>${player.totalPoints}p · ${player.totalAnswers}r</small>`;
+    } else {
+      const isMeText = isMe ? ' <strong>(Tú)</strong>' : '';
+      li.innerHTML = `${presenceHtml}<span class="rank">${medals[idx] || '·'}</span><span>${player.name}${isMeText}</span><small>${player.totalPoints}p · ${player.totalAnswers}r</small>`;
     }
-    
-    const isMeText = player.name === myPlayerName ? ' <strong>(Tú)</strong>' : '';
-    li.innerHTML = `${presenceHtml}<span class="rank">${medals[idx] || '·'}</span><span>${player.name}${isMeText}</span><small>${player.totalPoints}p · ${player.totalAnswers}r</small>`;
 
-    const removeBtn = document.createElement('button');
-    removeBtn.textContent = '✕';
-    removeBtn.className = 'remove-btn';
-    removeBtn.addEventListener('click', () => {
-      if (confirm(`¿Eliminar a ${player.name}?`)) {
-        if (isMultiplayerActive) {
-          removePlayerFromFirebase(player.name);
-        } else {
-          const idx = players.indexOf(player);
-          if (idx > -1) players.splice(idx, 1);
-          renderPlayers();
-          renderScoreboard();
-          syncData();
-        }
+    const canRemove = !isMultiplayerActive || isHost || isMe;
+
+    if (canRemove) {
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '✕';
+      removeBtn.className = 'remove-btn';
+      if (isMultiplayerActive && isMe && !isHost) {
+        removeBtn.title = "Salir de la sala";
+      } else if (isMultiplayerActive && isHost && !isMe) {
+        removeBtn.title = "Eliminar de la sala";
       }
-    });
-
-    li.appendChild(removeBtn);
+      removeBtn.addEventListener('click', () => {
+        const confirmMsg = isMultiplayerActive && isMe && !isHost 
+          ? "¿Seguro que deseas salir de la sala?" 
+          : `¿Eliminar a ${player.name}?`;
+        if (confirm(confirmMsg)) {
+          if (isMultiplayerActive) {
+            removePlayerFromFirebase(player.name);
+          } else {
+            const idx = players.indexOf(player);
+            if (idx > -1) players.splice(idx, 1);
+            renderPlayers();
+            renderScoreboard();
+            syncData();
+          }
+        }
+      });
+      li.appendChild(removeBtn);
+    }
     playerList.appendChild(li);
   });
 }
@@ -346,6 +242,14 @@ function joinGame() {
   welcomeScreen.classList.add('hidden');
   
   if (isMultiplayerActive) {
+    // Reclamar la sala si no tiene dueño
+    database.ref(`rooms/${roomId}/owner`).transaction((currentOwner) => {
+      if (!currentOwner) {
+        return name;
+      }
+      return currentOwner;
+    });
+
     database.ref(`rooms/${roomId}/players/${name}`).set({
       name: name,
       totalPoints: 0,
@@ -618,13 +522,52 @@ function updateSyncUI(status, text) {
 function setupRoomListeners() {
   if (firebaseRefs.players) firebaseRefs.players.off();
   if (firebaseRefs.gameState) firebaseRefs.gameState.off();
+  if (firebaseRefs.owner) firebaseRefs.owner.off();
+  if (firebaseRefs.closed) firebaseRefs.closed.off();
+
+  // Escuchar si la sala está cerrada
+  firebaseRefs.closed = database.ref(`rooms/${roomId}/closed`);
+  firebaseRefs.closed.on('value', (snapshot) => {
+    const closed = snapshot.val();
+    if (closed === true) {
+      alert("La sala ha sido cerrada por el anfitrión.");
+      localStorage.removeItem('roomName');
+      localStorage.removeItem('myPlayerName');
+      isMultiplayerActive = false;
+      database = null;
+      window.location.href = window.location.href.split('?')[0];
+    }
+  });
+
+  // Escuchar dueño de la sala
+  firebaseRefs.owner = database.ref(`rooms/${roomId}/owner`);
+  firebaseRefs.owner.on('value', (snapshot) => {
+    const owner = snapshot.val();
+    roomOwner = owner || '';
+    
+    // Si no hay dueño y ya ingresamos nuestro nombre, reclamamos la sala
+    if (!roomOwner && myPlayerName) {
+      database.ref(`rooms/${roomId}/owner`).transaction((currentOwner) => {
+        if (!currentOwner) {
+          return myPlayerName;
+        }
+        return currentOwner;
+      });
+    }
+    
+    isHost = (myPlayerName && roomOwner === myPlayerName);
+    updateHostUI();
+    renderPlayers();
+  });
 
   firebaseRefs.players = database.ref(`rooms/${roomId}/players`);
   firebaseRefs.players.on('value', (snapshot) => {
     const data = snapshot.val();
     players.length = 0;
+    let stillInRoom = false;
     if (data) {
       Object.keys(data).forEach(key => {
+        if (key === myPlayerName) stillInRoom = true;
         players.push({
           name: key,
           totalPoints: data[key].totalPoints || 0,
@@ -633,6 +576,18 @@ function setupRoomListeners() {
         });
       });
     }
+
+    // Si la sala tiene jugadores y mi nombre no está (y ya había ingresado), fui eliminado
+    if (isMultiplayerActive && myPlayerName && !stillInRoom && data) {
+      alert("Has sido eliminado de la sala por el anfitrión.");
+      localStorage.removeItem('myPlayerName');
+      localStorage.removeItem('roomName');
+      isMultiplayerActive = false;
+      database = null;
+      window.location.href = window.location.href.split('?')[0];
+      return;
+    }
+
     renderPlayers();
     renderScoreboard();
   });
@@ -810,6 +765,22 @@ saveSyncSettingsBtn.addEventListener('click', saveSyncSettings);
 disconnectSyncBtn.addEventListener('click', disconnectSync);
 
 shareLinkBtn.addEventListener('click', generateShareLink);
+
+closeRoomBtn.addEventListener('click', () => {
+  if (confirm("¿Estás seguro de que deseas cerrar la sala permanentemente? Todos los jugadores serán desconectados.")) {
+    if (isMultiplayerActive) {
+      database.ref(`rooms/${roomId}/closed`).set(true);
+    }
+  }
+});
+
+function updateHostUI() {
+  if (isMultiplayerActive && isHost) {
+    closeRoomBtn.classList.remove('hidden');
+  } else {
+    closeRoomBtn.classList.add('hidden');
+  }
+}
 
 joinGameBtn.addEventListener('click', joinGame);
 joinPlayerNameInput.addEventListener('keydown', (e) => {

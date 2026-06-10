@@ -427,6 +427,15 @@
 
           showSyncIndicator();
 
+          // Escuchar si la sala fue cerrada
+          database.ref(`rooms/${room}/closed`).on('value', (snapshot) => {
+            const closed = snapshot.val();
+            if (closed === true) {
+              alert("La sala ha sido cerrada por el anfitrión.");
+              window.location.href = window.location.href.split('?')[0];
+            }
+          });
+
           // Escuchar cambios de jugadores
           database.ref(`rooms/${room}/players`).on('value', (snapshot) => {
             showSyncIndicator();
