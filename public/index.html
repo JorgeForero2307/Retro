@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Juego de Habilidades equipo CMG</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <div class="page-container">
     <header>
@@ -42,7 +44,8 @@
       </article>
       <article class="card">
         <h3>🎯 16 Categorías</h3>
-        <p>⌨ Mecanografía • 📊 Excel • 🎬 Películas • ∑ Fórmulas • ⚽ Fútbol • 💻 Código • 🏃 Agilidad • 🐍 Python • 🦁 Animales • 🎯 Habilidades • ✨ JavaScript • 👑 Liderazgo • 💼 Negocios • 🎵 Música • 🎭 Cultura</p>
+        <p>⌨ Mecanografía • 📊 Excel • 🎬 Películas • ∑ Fórmulas • ⚽ Fútbol • 💻 Código • 🏃 Agilidad • 🐍 Python • 🦁
+          Animales • 🎯 Habilidades • ✨ JavaScript • 👑 Liderazgo • 💼 Negocios • 🎵 Música • 🎭 Cultura</p>
       </article>
     </section>
 
@@ -54,8 +57,10 @@
 
       <div class="box">
         <h2>📺 Modo Espectador</h2>
-        <p style="color: #94a3b8; margin: 8px 0; font-size: 0.95rem;">Abre una pantalla para que el equipo vea el leaderboard en vivo mientras compiten.</p>
-        <button id="spectatorBtnMain" class="primary-btn" style="background: linear-gradient(120deg, #10b981, #059669);">🔴 Comenzar transmisión</button>
+        <p style="color: #94a3b8; margin: 8px 0; font-size: 0.95rem;">Abre una pantalla para que el equipo vea el
+          leaderboard en vivo mientras compiten.</p>
+        <button id="spectatorBtnMain" class="primary-btn"
+          style="background: linear-gradient(120deg, #10b981, #059669);">🔴 Comenzar transmisión</button>
       </div>
     </section>
 
@@ -68,7 +73,8 @@
       <div class="box board-box">
         <h2>Tablero del juego</h2>
         <div id="gameBoard" class="game-board"></div>
-        <p class="board-hint">Usa las flechas del teclado o haz clic en un casillero, luego presiona Enter para abrir el desafío.</p>
+        <p class="board-hint">Usa las flechas del teclado o haz clic en un casillero, luego presiona Enter para abrir el
+          desafío.</p>
       </div>
     </section>
 
@@ -82,12 +88,15 @@
         <h2>Respuestas de la Ronda</h2>
         <ul id="submissionsList" class="player-list"></ul>
         <div class="results-box-container" style="margin-top: 16px;">
-          <div class="results-box hidden" id="resultsBox" style="background: rgba(16, 185, 129, 0.1); border: 2px solid rgba(16, 185, 129, 0.3); padding: 14px; border-radius: 10px;">
+          <div class="results-box hidden" id="resultsBox"
+            style="background: rgba(16, 185, 129, 0.1); border: 2px solid rgba(16, 185, 129, 0.3); padding: 14px; border-radius: 10px;">
             <h2>Resultados individuales</h2>
             <p id="resultsText" style="margin-top: 8px;"></p>
           </div>
         </div>
-        <button id="resetBtn" class="primary-btn" style="background: linear-gradient(120deg, #38bdf8, #0ea5e9); color: #0f172a; margin-top: 16px;">Siguiente Ronda</button>
+        <button id="resetBtn" class="primary-btn"
+          style="background: linear-gradient(120deg, #38bdf8, #0ea5e9); color: #0f172a; margin-top: 16px;">Siguiente
+          Ronda</button>
       </div>
     </section>
 
@@ -101,8 +110,8 @@
     <div class="modal-content">
       <span id="closeModalBtn" class="close-modal-btn">&times;</span>
       <h2 id="modalTitle">🔌 Configurar Multijugador</h2>
-      <p id="modalDescription" class="modal-description">Ingresa el nombre de la sala para conectarte en tiempo real con tu equipo.</p>
-      
+      <p id="modalDescription" class="modal-description">Ingresa el nombre de la sala</p>
+
       <div class="form-group">
         <label id="modalInputLabel" for="roomNameInput">Nombre de la Sala (Room):</label>
         <div class="row">
@@ -110,7 +119,7 @@
           <button id="randomRoomBtn" type="button" style="background: var(--accent); color: var(--bg);">Generar</button>
         </div>
       </div>
-      
+
       <div class="modal-actions">
         <button id="saveSyncSettingsBtn" class="primary-btn" style="margin-top: 0;">Guardar y Conectar</button>
         <button id="disconnectSyncBtn" class="secondary-btn">Volver a Modo Local</button>
@@ -122,7 +131,7 @@
   <div id="welcomeScreen" class="welcome-screen">
     <div class="welcome-box">
       <h2>⚡ ¡Bienvenido al Juego de Habilidades!</h2>
-      <p>Para entrar a competir con tu equipo en tiempo real, escribe tu nombre o apodo:</p>
+      <p>Escribe tu nombre o apodo:</p>
       <div class="welcome-row">
         <input type="text" id="joinPlayerName" placeholder="Tu nombre..." maxLength="15" />
         <button id="joinGameBtn" class="primary-btn">Comenzar</button>
@@ -136,4 +145,5 @@
   <script src="questions.js"></script>
   <script src="script.js"></script>
 </body>
+
 </html>
