@@ -50,6 +50,7 @@ let currentQuestions = [];
 let answerSubmitted = false;
 let challengeStartTime = 0;
 let loadedChallengeStartTime = 0;
+let challengeRevealed = false;
 
 // Variables de Estado de Firebase
 let isMultiplayerActive = false;
@@ -219,7 +220,8 @@ function selectCategory(cat) {
       currentCategory: cat,
       currentQuestions: questions,
       challengeActive: true,
-      challengeStartTime: firebase.database.ServerValue.TIMESTAMP,
+      challengeRevealed: false,
+      challengeStartTime: 0,
       submissions: null
     });
   } else {
@@ -326,7 +328,38 @@ function loadCategory() {
     return; // Mantener la vista de resultados
   }
   
+  // Si es multijugador y no está revelado, mostrar pantalla de espera
+  if (isMultiplayerActive && !challengeRevealed) {
+    challengeContent.innerHTML = `
+      <div class="lobby-wait-screen" style="text-align: center; padding: 45px 20px; background: rgba(30, 41, 59, 0.4); border-radius: 16px; border: 1px dashed var(--border);">
+        <span style="font-size: 3rem; animation: pulse 1.5s infinite; display: inline-block;">🎯</span>
+        <h3 style="color: var(--accent); margin: 20px 0 10px 0; font-size: 1.5rem;">Categoría: ${currentCategory.toUpperCase()}</h3>
+        <p style="color: #cbd5e1; margin-bottom: 20px;">El anfitrión está preparando el desafío. ¡Prepárate para responder rápido!</p>
+        <div id="hostRevealContainer"></div>
+      </div>
+    `;
+    
+    submitAnswersBtn.classList.add('hidden');
+    
+    setTimeout(() => {
+      const container = document.getElementById('hostRevealContainer');
+      if (container && isHost) {
+        container.innerHTML = `
+          <button id="revealChallengeBtn" class="primary-btn" style="background: linear-gradient(120deg, #10b981, #059669); color: white; width: auto; padding: 12px 30px; font-size: 1.1rem; margin-top: 10px; border-radius: 10px; font-weight: bold;">
+            🚀 Comenzar Ronda para todos
+          </button>
+        `;
+        const revealBtn = document.getElementById('revealChallengeBtn');
+        if (revealBtn) {
+          revealBtn.addEventListener('click', revealChallenge);
+        }
+      }
+    }, 50);
+    return;
+  }
+  
   challengeContent.innerHTML = '';
+  submitAnswersBtn.classList.remove('hidden');
   currentQuestions.forEach((item, idx) => {
     const q = document.createElement('div');
     q.className = 'challenge-question';
@@ -627,6 +660,7 @@ function setupRoomListeners() {
       currentCategory = '';
       currentQuestions = [];
       loadedChallengeStartTime = 0;
+      challengeRevealed = false;
       renderBoard();
       return;
     }
@@ -640,6 +674,7 @@ function setupRoomListeners() {
     currentCategory = state.currentCategory || '';
     currentQuestions = state.currentQuestions || [];
     challengeStartTime = state.challengeStartTime || 0;
+    challengeRevealed = state.challengeRevealed === true;
     challengeSection.classList.remove('hidden');
 
     // Comprobar si ya envié respuestas en esta ronda
@@ -656,8 +691,8 @@ function setupRoomListeners() {
         clearChallenge();
       }
       
-      // SÓLO recargar la categoría si es un nuevo desafío (evita borrar inputs activos de otros jugadores)
-      if (loadedChallengeStartTime !== challengeStartTime) {
+      // SÓLO recargar la categoría si es un nuevo desafío o cambia el estado de revelado (evita borrar inputs activos de otros jugadores)
+      if (loadedChallengeStartTime !== challengeStartTime || !challengeRevealed) {
         loadCategory();
       }
     }
@@ -703,6 +738,15 @@ function canAdvanceRound(submissions) {
   
   const subs = submissions || {};
   return onlinePlayers.every(p => subs[p.name]);
+}
+
+function revealChallenge() {
+  if (isMultiplayerActive && isHost) {
+    database.ref(`rooms/${roomId}/gameState`).update({
+      challengeRevealed: true,
+      challengeStartTime: firebase.database.ServerValue.TIMESTAMP
+    });
+  }
 }
 
 function renderRoundSubmissions(submissions) {
