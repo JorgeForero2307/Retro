@@ -31,7 +31,6 @@ const syncSettingsModal = document.getElementById('syncSettingsModal');
 const closeModalBtn = document.getElementById('closeModalBtn');
 const roomNameInput = document.getElementById('roomNameInput');
 const randomRoomBtn = document.getElementById('randomRoomBtn');
-const firebaseConfigInput = document.getElementById('firebaseConfigInput');
 const saveSyncSettingsBtn = document.getElementById('saveSyncSettingsBtn');
 const disconnectSyncBtn = document.getElementById('disconnectSyncBtn');
 
@@ -48,7 +47,15 @@ let isMultiplayerActive = false;
 let roomId = '';
 let myPlayerName = localStorage.getItem('myPlayerName') || '';
 let database = null;
-let firebaseConfig = null;
+const firebaseConfig = {
+  apiKey: "AIzaSyD0ani2ByTvLboCXVdMGcdEbOAg7qrrdaQ",
+  authDomain: "retro-e9a27.firebaseapp.com",
+  projectId: "retro-e9a27",
+  databaseURL: "https://retro-e9a27-default-rtdb.firebaseio.com",
+  storageBucket: "retro-e9a27.firebasestorage.app",
+  messagingSenderId: "51894964862",
+  appId: "1:51894964862:web:43d30b9a1e5db4619e3e2f"
+};
 let firebaseRefs = {};
 
 // TABLERO 4x4 CON 16 CATEGORÍAS
@@ -547,10 +554,8 @@ function openSpectatorMode() {
   if (isMultiplayerActive) {
     const params = new URLSearchParams();
     params.set('room', roomId);
-    const savedConfigB64 = localStorage.getItem('firebaseConfigB64');
-    if (savedConfigB64) {
-      params.set('config', savedConfigB64);
-    }
+    const configB64 = btoa(JSON.stringify(firebaseConfig));
+    params.set('config', configB64);
     url += '?' + params.toString();
   }
   window.open(url, 'spectator', 'width=1280,height=720');
@@ -563,34 +568,12 @@ function openSpectatorMode() {
 function initFirebaseConnection() {
   const params = new URLSearchParams(window.location.search);
   const urlRoom = params.get('room');
-  const urlConfig = params.get('config');
+  let room = urlRoom || localStorage.getItem('roomName');
 
-  let configB64 = urlConfig;
-  let room = urlRoom;
-
-  if (urlConfig && urlRoom) {
-    localStorage.setItem('firebaseConfigB64', urlConfig);
-    localStorage.setItem('roomName', urlRoom);
-  } else {
-    configB64 = localStorage.getItem('firebaseConfigB64');
-    room = localStorage.getItem('roomName');
-  }
-
-  if (configB64 && room) {
-    try {
-      const configString = atob(configB64);
-      firebaseConfig = JSON.parse(configString);
-      roomId = room;
-      
-      if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL) {
-        throw new Error("Claves faltantes");
-      }
-      
-      connectToFirebase();
-    } catch (e) {
-      console.error("Error al decodificar la configuración:", e);
-      updateSyncUI('error', "Error en Configuración");
-    }
+  if (room) {
+    roomId = room;
+    localStorage.setItem('roomName', room);
+    connectToFirebase();
   } else {
     updateSyncUI('local', "Modo Local");
   }
@@ -622,7 +605,6 @@ function startFirebaseApp() {
     setupMyPresence();
     
     roomNameInput.value = roomId;
-    firebaseConfigInput.value = JSON.stringify(firebaseConfig, null, 2);
   } catch (e) {
     console.error("Error al iniciar Firebase app:", e);
     updateSyncUI('error', "Error de Conexión");
@@ -729,9 +711,8 @@ function setupMyPresence() {
 
 function generateShareLink() {
   if (!isMultiplayerActive) return;
-  const b64 = localStorage.getItem('firebaseConfigB64');
   const cleanUrl = window.location.href.split('?')[0].split('#')[0];
-  const shareUrl = `${cleanUrl}?room=${encodeURIComponent(roomId)}&config=${encodeURIComponent(b64)}`;
+  const shareUrl = `${cleanUrl}?room=${encodeURIComponent(roomId)}`;
   
   navigator.clipboard.writeText(shareUrl).then(() => {
     showToast("¡Enlace de invitación copiado al portapapeles! 📋");
@@ -758,52 +739,21 @@ function showToast(message) {
 
 function saveSyncSettings() {
   const room = roomNameInput.value.trim().replace(/[^a-zA-Z0-9-_]/g, '');
-  const configJson = firebaseConfigInput.value.trim();
 
   if (!room) {
     alert("Por favor ingresa un nombre de sala válido.");
     return;
   }
-  if (!configJson) {
-    alert("Por favor ingresa tu objeto firebaseConfig.");
-    return;
-  }
 
-  try {
-    let cleanJson = configJson;
-    if (!cleanJson.startsWith('{')) {
-      throw new Error("Formato incorrecto. Debe iniciar con {");
-    }
-    
-    let parsedConfig;
-    try {
-      parsedConfig = JSON.parse(cleanJson);
-    } catch (jsonErr) {
-      cleanJson = cleanJson.replace(/'/g, '"');
-      parsedConfig = JSON.parse(cleanJson);
-    }
-    
-    if (!parsedConfig.apiKey || !parsedConfig.databaseURL) {
-      throw new Error("El objeto debe tener 'apiKey' y 'databaseURL'");
-    }
-
-    const configB64 = btoa(JSON.stringify(parsedConfig));
-    localStorage.setItem('firebaseConfigB64', configB64);
-    localStorage.setItem('roomName', room);
-    
-    syncSettingsModal.classList.add('hidden');
-    
-    const cleanUrl = window.location.href.split('?')[0].split('#')[0];
-    window.location.href = `${cleanUrl}?room=${encodeURIComponent(room)}&config=${encodeURIComponent(configB64)}`;
-    
-  } catch (err) {
-    alert(`Error al analizar la configuración de Firebase: ${err.message}\nAsegúrate de ingresar un formato JSON válido (con comillas dobles).`);
-  }
+  localStorage.setItem('roomName', room);
+  syncSettingsModal.classList.add('hidden');
+  
+  const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+  window.location.href = `${cleanUrl}?room=${encodeURIComponent(room)}`;
 }
 
 function disconnectSync() {
   if (confirm("¿Estás seguro de que deseas desconectarte y volver al Modo Local?")) {
-    localStorage.removeItem('firebaseConfigB64');
     localStorage.removeItem('roomName');
     localStorage.removeItem('myPlayerName');
     
@@ -855,12 +805,6 @@ if (spectatorBtnMain) spectatorBtnMain.addEventListener('click', openSpectatorMo
 
 openSettingsBtn.addEventListener('click', () => {
   syncSettingsModal.classList.remove('hidden');
-  const configB64 = localStorage.getItem('firebaseConfigB64');
-  if (configB64) {
-    try {
-      firebaseConfigInput.value = JSON.stringify(JSON.parse(atob(configB64)), null, 2);
-    } catch(e){}
-  }
   roomNameInput.value = localStorage.getItem('roomName') || '';
 });
 

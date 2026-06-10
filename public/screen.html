@@ -352,14 +352,27 @@
       leaderboardGrid.innerHTML = html;
     }
 
+    const defaultFirebaseConfig = {
+      apiKey: "AIzaSyD0ani2ByTvLboCXVdMGcdEbOAg7qrrdaQ",
+      authDomain: "retro-e9a27.firebaseapp.com",
+      projectId: "retro-e9a27",
+      databaseURL: "https://retro-e9a27-default-rtdb.firebaseio.com",
+      storageBucket: "retro-e9a27.firebasestorage.app",
+      messagingSenderId: "51894964862",
+      appId: "1:51894964862:web:43d30b9a1e5db4619e3e2f"
+    };
+
     function initSync() {
       const params = new URLSearchParams(window.location.search);
       const room = params.get('room');
       const configB64 = params.get('config');
 
-      if (room && configB64) {
+      if (room) {
         try {
-          const firebaseConfig = JSON.parse(atob(configB64));
+          let firebaseConfig = defaultFirebaseConfig;
+          if (configB64) {
+            firebaseConfig = JSON.parse(atob(configB64));
+          }
           
           if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL) {
             throw new Error("Claves incorrectas");
