@@ -182,6 +182,10 @@ function renderBoard() {
         };
         cell.innerHTML = icons[node] || '?';
         cell.addEventListener('click', () => {
+          if (isMultiplayerActive && !isHost) {
+            showToast("Solo el anfitrión puede seleccionar la categoría 👑");
+            return;
+          }
           boardPosition = { row: ri, col: ci };
           renderBoard();
           selectCategory(node);
@@ -199,6 +203,10 @@ function selectCategory(cat) {
   }
 
   if (isMultiplayerActive) {
+    if (!isHost) {
+      showToast("Solo el anfitrión puede seleccionar la categoría 👑");
+      return;
+    }
     const questions = getRandomQuestions(cat, 3);
     
     database.ref(`rooms/${roomId}/gameState`).set({
@@ -218,6 +226,7 @@ function selectCategory(cat) {
 }
 
 function moveBoard(direction) {
+  if (isMultiplayerActive && !isHost) return;
   const next = { ...boardPosition };
   if (direction === 'ArrowUp') next.row = Math.max(0, next.row - 1);
   if (direction === 'ArrowDown') next.row = Math.min(3, next.row + 1);
@@ -229,6 +238,13 @@ function moveBoard(direction) {
     database.ref(`rooms/${roomId}/gameState/boardPosition`).set(boardPosition);
   } else {
     renderBoard();
+  }
+}
+
+function selectBoardCell() {
+  const node = boardLayout[boardPosition.row][boardPosition.col];
+  if (node && node !== 'start') {
+    selectCategory(node);
   }
 }
 
@@ -804,6 +820,10 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Enter') {
     e.preventDefault();
+    if (isMultiplayerActive && !isHost) {
+      showToast("Solo el anfitrión puede seleccionar la categoría 👑");
+      return;
+    }
     selectBoardCell();
   }
 });
