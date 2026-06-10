@@ -259,20 +259,26 @@
 
   <div id="syncIndicator" class="sync-indicator">🔄 Sincronizando...</div>
 
+  <!-- Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
   <script>
     const leaderboardGrid = document.getElementById('leaderboardGrid');
     const syncIndicator = document.getElementById('syncIndicator');
 
-    function renderSpectator() {
-      const gameData = localStorage.getItem('gameData');
-      const players = gameData ? JSON.parse(gameData) : [];
+    let players = [];
+    let isMultiplayer = false;
 
-      if (players.length === 0) {
+    function renderSpectator(customPlayers) {
+      const activePlayers = customPlayers || players;
+
+      if (activePlayers.length === 0) {
         leaderboardGrid.innerHTML = `<div class="empty-state"><h3>📍 Esperando jugadores...</h3><p>Los jugadores aparecerán aquí cuando se unan al juego</p></div>`;
         return;
       }
 
-      const sorted = [...players].sort((a, b) => b.totalPoints - a.totalPoints);
+      const sorted = [...activePlayers].sort((a, b) => b.totalPoints - a.totalPoints);
       const medals = ['🥇', '🥈', '🥉'];
       const colors = ['gold', 'silver', 'bronze'];
 
@@ -282,11 +288,18 @@
 
       sorted.slice(0, 10).forEach((player, idx) => {
         const isWinner = idx === 0;
+        
+        let onlineDot = '';
+        if (isMultiplayer) {
+          const isOnline = player.online !== false;
+          onlineDot = `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:${isOnline ? '#10b981' : '#64748b'}; margin-right:8px; box-shadow:${isOnline ? '0 0 6px #10b981' : 'none'};"></span>`;
+        }
+
         html += `
           <li class="leaderboard-item ${isWinner ? 'winner' : ''}">
             <span class="medal">${medals[idx] || '·'}</span>
             <div class="player-info">
-              <span class="player-name">#${idx + 1} ${player.name}</span>
+              <span class="player-name">${onlineDot}#${idx + 1} ${player.name}</span>
               <div class="player-stats">
                 <div class="stat-box">
                   <span class="stat-label">Puntos</span>
@@ -303,11 +316,10 @@
 
       html += `</ul></div>`;
 
-      // Estadísticas especiales
       if (sorted.length > 0) {
         const topScore = sorted[0];
-        const topAnswers = [...players].reduce((a, b) => a.totalAnswers > b.totalAnswers ? a : b);
-        const avgScore = Math.round(players.reduce((a, b) => a + b.totalPoints, 0) / players.length);
+        const topAnswers = [...activePlayers].reduce((a, b) => a.totalAnswers > b.totalAnswers ? a : b);
+        const avgScore = Math.round(activePlayers.reduce((a, b) => a + b.totalPoints, 0) / activePlayers.length);
 
         html += `<div class="leaderboard-card">
           <h2>📊 Estadísticas</h2>
@@ -340,19 +352,79 @@
       leaderboardGrid.innerHTML = html;
     }
 
-    function syncAndRefresh() {
-      syncIndicator.classList.add('active');
-      setTimeout(() => {
-        renderSpectator();
-        syncIndicator.classList.remove('active');
-      }, 500);
+    function initSync() {
+      const params = new URLSearchParams(window.location.search);
+      const room = params.get('room');
+      const configB64 = params.get('config');
+
+      if (room && configB64) {
+        try {
+          const firebaseConfig = JSON.parse(atob(configB64));
+          
+          if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL) {
+            throw new Error("Claves incorrectas");
+          }
+
+          firebase.initializeApp(firebaseConfig);
+          const database = firebase.database();
+          isMultiplayer = true;
+
+          showSyncIndicator();
+
+          database.ref(`rooms/${room}/players`).on('value', (snapshot) => {
+            showSyncIndicator();
+            const data = snapshot.val();
+            players = [];
+            if (data) {
+              Object.keys(data).forEach(key => {
+                players.push({
+                  name: key,
+                  totalPoints: data[key].totalPoints || 0,
+                  totalAnswers: data[key].totalAnswers || 0,
+                  online: data[key].online !== false
+                });
+              });
+            }
+            renderSpectator();
+          });
+
+        } catch (e) {
+          console.error("Error al conectar espectador a Firebase, usando LocalStorage fallback:", e);
+          setupLocalStoragePolling();
+        }
+      } else {
+        setupLocalStoragePolling();
+      }
     }
 
-    // Actualizar cada 2 segundos
-    setInterval(syncAndRefresh, 2000);
+    function showSyncIndicator() {
+      syncIndicator.classList.add('active');
+      setTimeout(() => {
+        syncIndicator.classList.remove('active');
+      }, 600);
+    }
 
-    // Renderizar inicialmente
-    renderSpectator();
+    function setupLocalStoragePolling() {
+      isMultiplayer = false;
+      
+      function syncAndRefresh() {
+        syncIndicator.classList.add('active');
+        setTimeout(() => {
+          const gameData = localStorage.getItem('gameData');
+          players = gameData ? JSON.parse(gameData) : [];
+          renderSpectator();
+          syncIndicator.classList.remove('active');
+        }, 500);
+      }
+
+      setInterval(syncAndRefresh, 2000);
+      
+      const gameData = localStorage.getItem('gameData');
+      players = gameData ? JSON.parse(gameData) : [];
+      renderSpectator();
+    }
+
+    initSync();
   </script>
 </body>
 </html>

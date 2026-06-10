@@ -15,6 +15,18 @@
       <p>Desafía tus Habilidades </p>
     </header>
 
+    <!-- Barra de Estado Multijugador -->
+    <div id="multiplayerBar" class="multiplayer-status-bar">
+      <div class="status-info">
+        <span id="statusDot" class="status-dot local"></span>
+        <span id="statusText">Modo Local</span>
+      </div>
+      <div class="status-actions">
+        <button id="shareLinkBtn" class="share-btn hidden">🔗 Compartir Enlace</button>
+        <button id="openSettingsBtn" class="action-btn">🔌 Configurar Conexión</button>
+      </div>
+    </div>
+
     <section class="cards">
       <article class="card quick-guide">
         <h3>🎮 Cómo empezar</h3>
@@ -83,6 +95,55 @@
       <p>⚡ Hecha por JFORE18</p>
     </footer>
   </div>
+
+  <!-- Modal de Configuración de Firebase -->
+  <div id="syncSettingsModal" class="modal hidden">
+    <div class="modal-content">
+      <span id="closeModalBtn" class="close-modal-btn">&times;</span>
+      <h2>🔌 Configurar Multijugador</h2>
+      <p class="modal-description">Conecta el juego a Firebase para jugar con tu equipo en tiempo real desde múltiples dispositivos.</p>
+      
+      <div class="form-group">
+        <label for="roomNameInput">Nombre de la Sala (Room):</label>
+        <div class="row">
+          <input type="text" id="roomNameInput" placeholder="Ej: CMG-Team" />
+          <button id="randomRoomBtn" type="button" style="background: var(--accent); color: var(--bg);">Generar</button>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="firebaseConfigInput">Configuración de Firebase (JSON):</label>
+        <textarea id="firebaseConfigInput" placeholder='{"apiKey": "...", "databaseURL": "...", "projectId": "..."}' rows="5" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: rgba(17, 24, 39, 0.8); color: var(--text); font-family: monospace; font-size: 0.9rem; resize: vertical;"></textarea>
+        <small class="help-text">Pega el objeto "firebaseConfig" de tu proyecto de Firebase. Debe incluir "databaseURL".</small>
+      </div>
+      
+      <div class="modal-actions">
+        <button id="saveSyncSettingsBtn" class="primary-btn" style="margin-top: 0;">Guardar y Conectar</button>
+        <button id="disconnectSyncBtn" class="secondary-btn">Volver a Modo Local</button>
+      </div>
+      
+      <div class="firebase-guide">
+        <h3>💡 ¿Cómo configurar tu Firebase gratis?</h3>
+        <ol>
+          <li>Crea un proyecto en <a href="https://console.firebase.google.com/" target="_blank" style="color: var(--accent); text-decoration: underline;">console.firebase.google.com</a>.</li>
+          <li>Agrega una aplicación web y copia el objeto <code>firebaseConfig</code>.</li>
+          <li>Activa <strong>Realtime Database</strong> en la consola de Firebase.</li>
+          <li>En la pestaña <strong>Reglas</strong> de la base de datos, cámbialas para permitir lectura y escritura temporales o permanentes:
+            <pre style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; font-size: 0.8rem; margin: 6px 0; color: #fbbf24; overflow-x: auto;">{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}</pre>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

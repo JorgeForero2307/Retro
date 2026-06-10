@@ -1,6 +1,6 @@
 // ============================================
 // JUEGO DE HABILIDADES - Sistema Profesional
-// 16 Categorías | Preguntas Aleatorias
+// 16 Categorías | Preguntas Aleatorias | Multijugador
 // ============================================
 
 const playerNameInput = document.getElementById('playerName');
@@ -20,12 +20,36 @@ const gameBoard = document.getElementById('gameBoard');
 const spectatorBtn = document.getElementById('spectatorBtn');
 const spectatorBtnMain = document.getElementById('spectatorBtnMain');
 
+// Elementos de la Barra Multijugador y Configuración
+const multiplayerBar = document.getElementById('multiplayerBar');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const shareLinkBtn = document.getElementById('shareLinkBtn');
+const openSettingsBtn = document.getElementById('openSettingsBtn');
+
+const syncSettingsModal = document.getElementById('syncSettingsModal');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const roomNameInput = document.getElementById('roomNameInput');
+const randomRoomBtn = document.getElementById('randomRoomBtn');
+const firebaseConfigInput = document.getElementById('firebaseConfigInput');
+const saveSyncSettingsBtn = document.getElementById('saveSyncSettingsBtn');
+const disconnectSyncBtn = document.getElementById('disconnectSyncBtn');
+
+// Variables de Estado del Juego
 const players = [];
 let currentCategory = '';
 let selectedPlayer = '';
 let boardPosition = { row: 1, col: 1 };
 let currentQuestions = [];
 let answerSubmitted = false;
+
+// Variables de Estado de Firebase
+let isMultiplayerActive = false;
+let roomId = '';
+let myPlayerName = localStorage.getItem('myPlayerName') || '';
+let database = null;
+let firebaseConfig = null;
+let firebaseRefs = {};
 
 // TABLERO 4x4 CON 16 CATEGORÍAS
 const boardLayout = [
@@ -160,7 +184,7 @@ const questionDatabase = {
 };
 
 function createPlayer(name) {
-  return { name, totalPoints: 0, totalAnswers: 0 };
+  return { name, totalPoints: 0, totalAnswers: 0, online: true };
 }
 
 function getRandomQuestions(category, count = 3) {
@@ -179,18 +203,31 @@ function renderPlayers() {
     const li = document.createElement('li');
     li.className = 'player-item';
     if (idx === 0 && players.length > 0) li.classList.add('leader');
-    li.innerHTML = `<span class="rank">${medals[idx] || '·'}</span><span>${player.name}</span><small>${player.totalPoints}p · ${player.totalAnswers}r</small>`;
+    
+    // Sincronización de estado online
+    let presenceHtml = '';
+    if (isMultiplayerActive) {
+      const isOnline = player.online !== false;
+      presenceHtml = `<span class="player-presence ${isOnline ? 'online' : 'offline'}" title="${isOnline ? 'En línea' : 'Desconectado'}"></span>`;
+    }
+    
+    const isMeText = player.name === myPlayerName ? ' <strong>(Tú)</strong>' : '';
+    li.innerHTML = `${presenceHtml}<span class="rank">${medals[idx] || '·'}</span><span>${player.name}${isMeText}</span><small>${player.totalPoints}p · ${player.totalAnswers}r</small>`;
 
     const removeBtn = document.createElement('button');
     removeBtn.textContent = '✕';
     removeBtn.className = 'remove-btn';
     removeBtn.addEventListener('click', () => {
-      const idx = players.indexOf(player);
-      if (idx > -1) players.splice(idx, 1);
-      if (selectedPlayer === player.name) selectedPlayer = '';
-      renderPlayers();
-      renderScoreboard();
-      syncData();
+      if (isMultiplayerActive) {
+        removePlayerFromFirebase(player.name);
+      } else {
+        const idx = players.indexOf(player);
+        if (idx > -1) players.splice(idx, 1);
+        if (selectedPlayer === player.name) selectedPlayer = '';
+        renderPlayers();
+        renderScoreboard();
+        syncData();
+      }
     });
 
     li.appendChild(removeBtn);
@@ -199,6 +236,9 @@ function renderPlayers() {
     const option = document.createElement('option');
     option.value = player.name;
     option.textContent = `${player.name} (${player.totalPoints}p)`;
+    if (player.name === selectedPlayer) {
+      option.selected = true;
+    }
     activePlayerSelect.appendChild(option);
   });
 }
@@ -254,9 +294,29 @@ function renderBoard() {
 }
 
 function selectCategory(cat) {
-  currentCategory = cat;
-  currentQuestions = getRandomQuestions(cat, 3);
-  loadCategory();
+  if (players.length === 0) {
+    alert('Agrega al menos un jugador');
+    return;
+  }
+  
+  if (isMultiplayerActive) {
+    const activeP = selectedPlayer || (players[0] ? players[0].name : '');
+    const questions = getRandomQuestions(cat, 3);
+    
+    database.ref(`rooms/${roomId}/gameState`).set({
+      boardPosition: boardPosition,
+      currentCategory: cat,
+      currentQuestions: questions,
+      selectedPlayer: activeP,
+      challengeActive: true,
+      answerSubmitted: false,
+      results: null
+    });
+  } else {
+    currentCategory = cat;
+    currentQuestions = getRandomQuestions(cat, 3);
+    loadCategory();
+  }
 }
 
 function moveBoard(direction) {
@@ -266,7 +326,12 @@ function moveBoard(direction) {
   if (direction === 'ArrowLeft') next.col = Math.max(0, next.col - 1);
   if (direction === 'ArrowRight') next.col = Math.min(3, next.col + 1);
   boardPosition = next;
-  renderBoard();
+  
+  if (isMultiplayerActive) {
+    database.ref(`rooms/${roomId}/gameState/boardPosition`).set(boardPosition);
+  } else {
+    renderBoard();
+  }
 }
 
 function selectBoardCell() {
@@ -276,12 +341,43 @@ function selectBoardCell() {
 
 function addPlayer() {
   const name = playerNameInput.value.trim();
-  if (!name || players.some(p => p.name.toLowerCase() === name.toLowerCase())) return;
-  players.push(createPlayer(name));
-  playerNameInput.value = '';
-  renderPlayers();
-  renderScoreboard();
-  syncData();
+  if (!name) return;
+  
+  if (isMultiplayerActive) {
+    if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      alert('Ya existe un jugador con ese nombre.');
+      return;
+    }
+    
+    myPlayerName = name;
+    localStorage.setItem('myPlayerName', name);
+    
+    database.ref(`rooms/${roomId}/players/${name}`).set({
+      name: name,
+      totalPoints: 0,
+      totalAnswers: 0,
+      online: true
+    }).then(() => {
+      playerNameInput.value = '';
+      setupMyPresence();
+    });
+  } else {
+    if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) return;
+    players.push(createPlayer(name));
+    playerNameInput.value = '';
+    renderPlayers();
+    renderScoreboard();
+    syncData();
+  }
+}
+
+function removePlayerFromFirebase(name) {
+  if (!isMultiplayerActive) return;
+  database.ref(`rooms/${roomId}/players/${name}`).remove();
+  if (myPlayerName === name) {
+    myPlayerName = '';
+    localStorage.removeItem('myPlayerName');
+  }
 }
 
 function clearChallenge() {
@@ -292,11 +388,13 @@ function clearChallenge() {
   submitAnswersBtn.style.opacity = '1';
   submitAnswersBtn.style.cursor = 'pointer';
   answerSubmitted = false;
+  
+  const existingBanner = document.getElementById('waitBanner');
+  if (existingBanner) existingBanner.remove();
 }
 
 function loadCategory() {
   if (players.length === 0) {
-    alert('Agrega al menos un jugador');
     return;
   }
   const icons = {
@@ -309,6 +407,16 @@ function loadCategory() {
   challengeTitle.textContent = `${icons[currentCategory] || ''} ${currentCategory.toUpperCase()}`;
   clearChallenge();
 
+  const isMeActive = (myPlayerName && selectedPlayer && myPlayerName.toLowerCase() === selectedPlayer.toLowerCase());
+  
+  if (isMultiplayerActive && !isMeActive) {
+    const banner = document.createElement('div');
+    banner.id = 'waitBanner';
+    banner.className = 'challenge-wait-banner';
+    banner.innerHTML = `El jugador activo es <strong>${selectedPlayer}</strong>. Esperando a que envíe sus respuestas...`;
+    challengeSection.insertBefore(banner, challengeSection.firstChild);
+  }
+
   currentQuestions.forEach((item, idx) => {
     const q = document.createElement('div');
     q.className = 'challenge-question';
@@ -316,26 +424,36 @@ function loadCategory() {
     lbl.textContent = `${idx + 1}/${currentQuestions.length}: ${item.label || item.text}`;
     q.appendChild(lbl);
 
+    let inpElement;
     if (item.type === 'typing') {
-      const ta = document.createElement('textarea');
-      ta.id = `answer-${idx}`;
-      ta.placeholder = item.text;
-      ta.value = '';
-      q.appendChild(ta);
+      inpElement = document.createElement('textarea');
+      inpElement.placeholder = item.text;
     } else if (item.type === 'choice') {
-      const sel = document.createElement('select');
-      sel.id = `answer-${idx}`;
-      sel.innerHTML = '<option value="">Selecciona...</option>' + item.options.map(o => `<option value="${o}">${o}</option>`).join('');
-      q.appendChild(sel);
+      inpElement = document.createElement('select');
+      inpElement.innerHTML = '<option value="">Selecciona...</option>' + item.options.map(o => `<option value="${o}">${o}</option>`).join('');
     } else {
-      const inp = document.createElement('input');
-      inp.id = `answer-${idx}`;
-      inp.type = 'text';
-      inp.placeholder = 'Respuesta...';
-      q.appendChild(inp);
+      inpElement = document.createElement('input');
+      inpElement.type = 'text';
+      inpElement.placeholder = 'Respuesta...';
     }
+    
+    inpElement.id = `answer-${idx}`;
+    inpElement.value = '';
+    
+    if (isMultiplayerActive && !isMeActive) {
+      inpElement.disabled = true;
+      inpElement.style.opacity = '0.7';
+    }
+    
+    q.appendChild(inpElement);
     challengeContent.appendChild(q);
   });
+  
+  if (isMultiplayerActive && !isMeActive) {
+    submitAnswersBtn.classList.add('hidden');
+  } else {
+    submitAnswersBtn.classList.remove('hidden');
+  }
 }
 
 function normalizeAnswer(value) {
@@ -345,7 +463,8 @@ function normalizeAnswer(value) {
 function scoreAnswers() {
   if (!currentCategory || players.length === 0 || answerSubmitted) return;
   answerSubmitted = true;
-  const player = players.find(p => p.name === selectedPlayer) || players[0];
+  
+  const player = players.find(p => p.name.toLowerCase() === (selectedPlayer || '').toLowerCase()) || players[0];
   let score = 0, answered = 0;
 
   currentQuestions.forEach((item, idx) => {
@@ -369,26 +488,50 @@ function scoreAnswers() {
     }
   });
 
-  player.totalPoints += score;
-  player.totalAnswers += answered;
-  selectedPlayer = player.name;
-  renderPlayers();
-  renderScoreboard();
-  syncData();
-
+  const newPoints = player.totalPoints + score;
+  const newAnswers = player.totalAnswers + answered;
   const pct = Math.round((score / currentQuestions.length) * 100);
-  resultsText.innerHTML = `<div class="result-summary"><span class="player-name">${player.name}</span><span class="score">${score}/${currentQuestions.length} (${pct}%)</span><p class="total">Total: ${player.totalPoints}p</p></div>`;
-  resultsBox.classList.remove('hidden');
-  submitAnswersBtn.disabled = true;
-  submitAnswersBtn.style.opacity = '0.5';
-  submitAnswersBtn.style.cursor = 'not-allowed';
+
+  if (isMultiplayerActive) {
+    database.ref(`rooms/${roomId}/players/${player.name}`).update({
+      totalPoints: newPoints,
+      totalAnswers: newAnswers
+    });
+    
+    database.ref(`rooms/${roomId}/gameState`).update({
+      answerSubmitted: true,
+      results: {
+        playerName: player.name,
+        score: score,
+        total: currentQuestions.length,
+        pct: pct,
+        totalPoints: newPoints
+      }
+    });
+  } else {
+    player.totalPoints = newPoints;
+    player.totalAnswers = newAnswers;
+    selectedPlayer = player.name;
+    renderPlayers();
+    renderScoreboard();
+    syncData();
+
+    resultsText.innerHTML = `<div class="result-summary"><span class="player-name">${player.name}</span><span class="score">${score}/${currentQuestions.length} (${pct}%)</span><p class="total">Total: ${player.totalPoints}p</p></div>`;
+    resultsBox.classList.remove('hidden');
+    submitAnswersBtn.disabled = true;
+    submitAnswersBtn.style.opacity = '0.5';
+    submitAnswersBtn.style.cursor = 'not-allowed';
+  }
 }
 
 function syncData() {
-  localStorage.setItem('gameData', JSON.stringify(players));
+  if (!isMultiplayerActive) {
+    localStorage.setItem('gameData', JSON.stringify(players));
+  }
 }
 
 function loadData() {
+  if (isMultiplayerActive) return;
   const saved = localStorage.getItem('gameData');
   if (saved) {
     const data = JSON.parse(saved);
@@ -399,25 +542,343 @@ function loadData() {
 }
 
 function openSpectatorMode() {
-  const basePath = window.location.href.split('?')[0].replace('index.html', '');
-  const screenUrl = basePath + 'screen.html';
-  window.open(screenUrl, 'spectator', 'width=1280,height=720');
+  const basePath = window.location.href.split('?')[0].split('#')[0].replace('index.html', '');
+  let url = basePath + 'screen.html';
+  if (isMultiplayerActive) {
+    const params = new URLSearchParams();
+    params.set('room', roomId);
+    const savedConfigB64 = localStorage.getItem('firebaseConfigB64');
+    if (savedConfigB64) {
+      params.set('config', savedConfigB64);
+    }
+    url += '?' + params.toString();
+  }
+  window.open(url, 'spectator', 'width=1280,height=720');
 }
 
-// EVENT LISTENERS
+// ============================================
+// FUNCIONES DE SINCRONIZACIÓN DE FIREBASE
+// ============================================
+
+function initFirebaseConnection() {
+  const params = new URLSearchParams(window.location.search);
+  const urlRoom = params.get('room');
+  const urlConfig = params.get('config');
+
+  let configB64 = urlConfig;
+  let room = urlRoom;
+
+  if (urlConfig && urlRoom) {
+    localStorage.setItem('firebaseConfigB64', urlConfig);
+    localStorage.setItem('roomName', urlRoom);
+  } else {
+    configB64 = localStorage.getItem('firebaseConfigB64');
+    room = localStorage.getItem('roomName');
+  }
+
+  if (configB64 && room) {
+    try {
+      const configString = atob(configB64);
+      firebaseConfig = JSON.parse(configString);
+      roomId = room;
+      
+      if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL) {
+        throw new Error("Claves faltantes");
+      }
+      
+      connectToFirebase();
+    } catch (e) {
+      console.error("Error al decodificar la configuración:", e);
+      updateSyncUI('error', "Error en Configuración");
+    }
+  } else {
+    updateSyncUI('local', "Modo Local");
+  }
+}
+
+function connectToFirebase() {
+  updateSyncUI('connecting', "Conectando...");
+  try {
+    if (firebase.apps.length > 0) {
+      firebase.app().delete().then(startFirebaseApp);
+    } else {
+      startFirebaseApp();
+    }
+  } catch (e) {
+    console.error("Error de inicialización de Firebase:", e);
+    updateSyncUI('error', "Error de Conexión");
+  }
+}
+
+function startFirebaseApp() {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    database = firebase.database();
+    isMultiplayerActive = true;
+    
+    updateSyncUI('connected', `Sala: ${roomId}`);
+    
+    setupRoomListeners();
+    setupMyPresence();
+    
+    roomNameInput.value = roomId;
+    firebaseConfigInput.value = JSON.stringify(firebaseConfig, null, 2);
+  } catch (e) {
+    console.error("Error al iniciar Firebase app:", e);
+    updateSyncUI('error', "Error de Conexión");
+  }
+}
+
+function updateSyncUI(status, text) {
+  statusDot.className = "status-dot";
+  statusDot.classList.add(status);
+  statusText.textContent = text;
+  
+  if (status === 'connected') {
+    shareLinkBtn.classList.remove('hidden');
+    openSettingsBtn.textContent = "⚙️ Ajustes Sala";
+  } else {
+    shareLinkBtn.classList.add('hidden');
+    openSettingsBtn.textContent = "🔌 Configurar Conexión";
+  }
+}
+
+function setupRoomListeners() {
+  if (firebaseRefs.players) firebaseRefs.players.off();
+  if (firebaseRefs.gameState) firebaseRefs.gameState.off();
+
+  firebaseRefs.players = database.ref(`rooms/${roomId}/players`);
+  firebaseRefs.players.on('value', (snapshot) => {
+    const data = snapshot.val();
+    players.length = 0;
+    if (data) {
+      Object.keys(data).forEach(key => {
+        players.push({
+          name: key,
+          totalPoints: data[key].totalPoints || 0,
+          totalAnswers: data[key].totalAnswers || 0,
+          online: data[key].online !== false
+        });
+      });
+    }
+    renderPlayers();
+    renderScoreboard();
+  });
+
+  firebaseRefs.gameState = database.ref(`rooms/${roomId}/gameState`);
+  firebaseRefs.gameState.on('value', (snapshot) => {
+    const state = snapshot.val();
+    if (!state) {
+      challengeSection.classList.add('hidden');
+      currentCategory = '';
+      currentQuestions = [];
+      answerSubmitted = false;
+      renderBoard();
+      return;
+    }
+
+    if (state.boardPosition) {
+      boardPosition = state.boardPosition;
+      renderBoard();
+    }
+
+    if (state.selectedPlayer !== undefined) {
+      selectedPlayer = state.selectedPlayer;
+    }
+
+    if (state.challengeActive) {
+      currentCategory = state.currentCategory || '';
+      currentQuestions = state.currentQuestions || [];
+      answerSubmitted = state.answerSubmitted || false;
+      
+      challengeSection.classList.remove('hidden');
+      
+      if (state.answerSubmitted && state.results) {
+        loadCategory();
+        resultsText.innerHTML = `<div class="result-summary"><span class="player-name">${state.results.playerName}</span><span class="score">${state.results.score}/${state.results.total} (${state.results.pct}%)</span><p class="total">Total: ${state.results.totalPoints}p</p></div>`;
+        resultsBox.classList.remove('hidden');
+        submitAnswersBtn.disabled = true;
+        submitAnswersBtn.style.opacity = '0.5';
+        submitAnswersBtn.style.cursor = 'not-allowed';
+        submitAnswersBtn.classList.add('hidden');
+      } else {
+        loadCategory();
+      }
+    } else {
+      challengeSection.classList.add('hidden');
+      clearChallenge();
+      currentCategory = '';
+      currentQuestions = [];
+    }
+  });
+}
+
+function setupMyPresence() {
+  if (!isMultiplayerActive || !myPlayerName) return;
+
+  const myConnectionsRef = database.ref(`rooms/${roomId}/players/${myPlayerName}/online`);
+  const connectedRef = database.ref('.info/connected');
+  
+  connectedRef.on('value', (snap) => {
+    if (snap.val() === true) {
+      myConnectionsRef.set(true);
+      myConnectionsRef.onDisconnect().set(false);
+    }
+  });
+}
+
+function generateShareLink() {
+  if (!isMultiplayerActive) return;
+  const b64 = localStorage.getItem('firebaseConfigB64');
+  const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+  const shareUrl = `${cleanUrl}?room=${encodeURIComponent(roomId)}&config=${encodeURIComponent(b64)}`;
+  
+  navigator.clipboard.writeText(shareUrl).then(() => {
+    showToast("¡Enlace de invitación copiado al portapapeles! 📋");
+  }).catch(err => {
+    console.error("Error al copiar enlace:", err);
+    alert(`Comparte este enlace:\n${shareUrl}`);
+  });
+}
+
+function showToast(message) {
+  let toast = document.getElementById('copyToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'copyToast';
+    toast.className = 'copy-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}
+
+function saveSyncSettings() {
+  const room = roomNameInput.value.trim().replace(/[^a-zA-Z0-9-_]/g, '');
+  const configJson = firebaseConfigInput.value.trim();
+
+  if (!room) {
+    alert("Por favor ingresa un nombre de sala válido.");
+    return;
+  }
+  if (!configJson) {
+    alert("Por favor ingresa tu objeto firebaseConfig.");
+    return;
+  }
+
+  try {
+    let cleanJson = configJson;
+    if (!cleanJson.startsWith('{')) {
+      throw new Error("Formato incorrecto. Debe iniciar con {");
+    }
+    
+    let parsedConfig;
+    try {
+      parsedConfig = JSON.parse(cleanJson);
+    } catch (jsonErr) {
+      cleanJson = cleanJson.replace(/'/g, '"');
+      parsedConfig = JSON.parse(cleanJson);
+    }
+    
+    if (!parsedConfig.apiKey || !parsedConfig.databaseURL) {
+      throw new Error("El objeto debe tener 'apiKey' y 'databaseURL'");
+    }
+
+    const configB64 = btoa(JSON.stringify(parsedConfig));
+    localStorage.setItem('firebaseConfigB64', configB64);
+    localStorage.setItem('roomName', room);
+    
+    syncSettingsModal.classList.add('hidden');
+    
+    const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+    window.location.href = `${cleanUrl}?room=${encodeURIComponent(room)}&config=${encodeURIComponent(configB64)}`;
+    
+  } catch (err) {
+    alert(`Error al analizar la configuración de Firebase: ${err.message}\nAsegúrate de ingresar un formato JSON válido (con comillas dobles).`);
+  }
+}
+
+function disconnectSync() {
+  if (confirm("¿Estás seguro de que deseas desconectarte y volver al Modo Local?")) {
+    localStorage.removeItem('firebaseConfigB64');
+    localStorage.removeItem('roomName');
+    localStorage.removeItem('myPlayerName');
+    
+    isMultiplayerActive = false;
+    database = null;
+    
+    window.location.href = window.location.href.split('?')[0];
+  }
+}
+
+function generateRandomRoom() {
+  const randomId = 'CMG-' + Math.floor(1000 + Math.random() * 9000);
+  roomNameInput.value = randomId;
+}
+
+// ============================================
+// CONFIGURACIÓN DE LISTENERS DE EVENTOS
+// ============================================
+
 addPlayerBtn.addEventListener('click', addPlayer);
 playerNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addPlayer(); });
-activePlayerSelect.addEventListener('change', (e) => { selectedPlayer = e.target.value; });
-submitAnswersBtn.addEventListener('click', scoreAnswers);
-resetBtn.addEventListener('click', () => {
-  clearChallenge();
-  challengeSection.classList.add('hidden');
-  currentCategory = '';
+
+activePlayerSelect.addEventListener('change', (e) => {
+  selectedPlayer = e.target.value;
+  if (isMultiplayerActive) {
+    database.ref(`rooms/${roomId}/gameState/selectedPlayer`).set(selectedPlayer);
+  }
 });
 
-// Ambos botones de espectador funcionan
+submitAnswersBtn.addEventListener('click', scoreAnswers);
+
+resetBtn.addEventListener('click', () => {
+  if (isMultiplayerActive) {
+    database.ref(`rooms/${roomId}/gameState`).update({
+      challengeActive: false,
+      currentCategory: '',
+      answerSubmitted: false,
+      results: null
+    });
+  } else {
+    clearChallenge();
+    challengeSection.classList.add('hidden');
+    currentCategory = '';
+  }
+});
+
 if (spectatorBtn) spectatorBtn.addEventListener('click', openSpectatorMode);
 if (spectatorBtnMain) spectatorBtnMain.addEventListener('click', openSpectatorMode);
+
+openSettingsBtn.addEventListener('click', () => {
+  syncSettingsModal.classList.remove('hidden');
+  const configB64 = localStorage.getItem('firebaseConfigB64');
+  if (configB64) {
+    try {
+      firebaseConfigInput.value = JSON.stringify(JSON.parse(atob(configB64)), null, 2);
+    } catch(e){}
+  }
+  roomNameInput.value = localStorage.getItem('roomName') || '';
+});
+
+closeModalBtn.addEventListener('click', () => {
+  syncSettingsModal.classList.add('hidden');
+});
+
+randomRoomBtn.addEventListener('click', generateRandomRoom);
+saveSyncSettingsBtn.addEventListener('click', saveSyncSettings);
+disconnectSyncBtn.addEventListener('click', disconnectSync);
+
+shareLinkBtn.addEventListener('click', generateShareLink);
+
+window.addEventListener('click', (e) => {
+  if (e.target === syncSettingsModal) {
+    syncSettingsModal.classList.add('hidden');
+  }
+});
 
 document.addEventListener('keydown', (e) => {
   const active = document.activeElement;
@@ -432,6 +893,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+initFirebaseConnection();
 loadData();
 renderPlayers();
 renderScoreboard();
