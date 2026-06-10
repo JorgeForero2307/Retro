@@ -268,6 +268,7 @@
     const syncIndicator = document.getElementById('syncIndicator');
 
     let players = [];
+    let gameState = null;
     let isMultiplayer = false;
 
     function renderSpectator(customPlayers) {
@@ -280,9 +281,12 @@
 
       const sorted = [...activePlayers].sort((a, b) => b.totalPoints - a.totalPoints);
       const medals = ['🥇', '🥈', '🥉'];
-      const colors = ['gold', 'silver', 'bronze'];
 
-      let html = `<div class="leaderboard-card">
+      // Contenedor principal de dos columnas
+      let html = `<div class="leaderboard-grid-inner" style="display: grid; grid-template-columns: ${isMultiplayer && gameState && gameState.challengeActive ? '1.2fr 1fr' : '1fr'}; gap: 24px; width: 100%;">`;
+
+      // Columna 1: Ranking General
+      html += `<div class="leaderboard-card">
         <h2>👥 Ranking General</h2>
         <ul class="leaderboard-list">`;
 
@@ -305,10 +309,6 @@
                   <span class="stat-label">Puntos</span>
                   <span class="stat-value">${player.totalPoints}</span>
                 </div>
-                <div class="stat-box">
-                  <span class="stat-label">Respuestas</span>
-                  <span class="stat-value">${player.totalAnswers}</span>
-                </div>
               </div>
             </div>
           </li>`;
@@ -316,39 +316,82 @@
 
       html += `</ul></div>`;
 
-      if (sorted.length > 0) {
-        const topScore = sorted[0];
-        const topAnswers = [...activePlayers].reduce((a, b) => a.totalAnswers > b.totalAnswers ? a : b);
-        const avgScore = Math.round(activePlayers.reduce((a, b) => a + b.totalPoints, 0) / activePlayers.length);
+      // Columna 2: Estado de la Ronda o Estadísticas
+      if (isMultiplayer && gameState && gameState.challengeActive) {
+        const cat = gameState.currentCategory || '';
+        const icons = {
+          mecanografia: '⌨', excel: '📊', formulas: '∑', peliculas: '🎬',
+          futbol: '⚽', codigo: '💻', agilidad: '🏃', python: '🐍',
+          animales: '🦁', habilidades: '🎯', javascript: '✨', liderazgo: '👑',
+          negocios: '💼', musica: '🎵', cultura: '🎭'
+        };
+        const catIcon = icons[cat] || '❓';
+        const subs = gameState.submissions || {};
 
-        html += `<div class="leaderboard-card">
-          <h2>📊 Estadísticas</h2>
-          <ul class="leaderboard-list">
-            <li class="leaderboard-item">
-              <span style="font-size: 2rem; width: 50px;">🏆</span>
-              <div class="player-info">
-                <span class="player-name">Líder de Puntos</span>
-                <span class="stat-value">${topScore.name}</span>
-              </div>
-            </li>
-            <li class="leaderboard-item">
-              <span style="font-size: 2rem; width: 50px;">💬</span>
-              <div class="player-info">
-                <span class="player-name">Más Participación</span>
-                <span class="stat-value">${topAnswers.name}</span>
-              </div>
-            </li>
-            <li class="leaderboard-item">
-              <span style="font-size: 2rem; width: 50px;">📈</span>
-              <div class="player-info">
-                <span class="player-name">Promedio del Equipo</span>
-                <span class="stat-value">${avgScore}p</span>
-              </div>
-            </li>
-          </ul>
-        </div>`;
+        html += `<div class="leaderboard-card" style="border-color: #fbbf24; box-shadow: 0 20px 50px rgba(251, 191, 36, 0.15);">
+          <h2>⚡ Ronda en Vivo: ${catIcon} ${cat.toUpperCase()}</h2>
+          <ul class="leaderboard-list" style="margin-top: 15px;">`;
+
+        activePlayers.forEach(p => {
+          const sub = subs[p.name];
+          if (sub) {
+            html += `
+              <li class="leaderboard-item" style="background: rgba(16, 185, 129, 0.08); border-radius: 8px; padding: 12px; margin-bottom: 8px; border-bottom: none; display: flex; justify-content: space-between;">
+                <span class="player-name">✅ ${p.name}</span>
+                <div class="player-stats" style="gap: 8px;">
+                  <div class="stat-box" style="border-left-color: #10b981; background: rgba(16, 185, 129, 0.05); padding: 4px 8px; border-radius: 6px;">
+                    <span class="stat-value" style="color: #10b981; font-size: 1rem;">${sub.score}/${sub.total}</span>
+                  </div>
+                  <div class="stat-box" style="border-left-color: #fbbf24; background: rgba(251, 191, 36, 0.05); padding: 4px 8px; border-radius: 6px;">
+                    <span class="stat-value" style="color: #fbbf24; font-size: 1rem;">${sub.timeTakenSeconds}s</span>
+                  </div>
+                </div>
+              </li>`;
+          } else {
+            html += `
+              <li class="leaderboard-item" style="background: rgba(148, 163, 184, 0.04); border-radius: 8px; padding: 12px; margin-bottom: 8px; opacity: 0.7; border-bottom: none; display: flex; justify-content: space-between;">
+                <span class="player-name">⌛ ${p.name}</span>
+                <span style="color: #94a3b8; font-size: 0.9rem; font-style: italic;">Respondiendo...</span>
+              </li>`;
+          }
+        });
+        html += `</ul></div>`;
+      } else {
+        if (sorted.length > 0) {
+          const topScore = sorted[0];
+          const topAnswers = [...activePlayers].reduce((a, b) => a.totalAnswers > b.totalAnswers ? a : b);
+          const avgScore = Math.round(activePlayers.reduce((a, b) => a + b.totalPoints, 0) / activePlayers.length);
+
+          html += `<div class="leaderboard-card">
+            <h2>📊 Estadísticas</h2>
+            <ul class="leaderboard-list">
+              <li class="leaderboard-item">
+                <span style="font-size: 2rem; width: 50px;">🏆</span>
+                <div class="player-info">
+                  <span class="player-name">Líder de Puntos</span>
+                  <span class="stat-value">${topScore.name}</span>
+                </div>
+              </li>
+              <li class="leaderboard-item">
+                <span style="font-size: 2rem; width: 50px;">💬</span>
+                <div class="player-info">
+                  <span class="player-name">Más Participación</span>
+                  <span class="stat-value">${topAnswers.name}</span>
+                </div>
+              </li>
+              <li class="leaderboard-item">
+                <span style="font-size: 2rem; width: 50px;">📈</span>
+                <div class="player-info">
+                  <span class="player-name">Promedio del Equipo</span>
+                  <span class="stat-value">${avgScore}p</span>
+                </div>
+              </li>
+            </ul>
+          </div>`;
+        }
       }
 
+      html += `</div>`;
       leaderboardGrid.innerHTML = html;
     }
 
@@ -384,6 +427,7 @@
 
           showSyncIndicator();
 
+          // Escuchar cambios de jugadores
           database.ref(`rooms/${room}/players`).on('value', (snapshot) => {
             showSyncIndicator();
             const data = snapshot.val();
@@ -398,6 +442,13 @@
                 });
               });
             }
+            renderSpectator();
+          });
+
+          // Escuchar cambios de estado de ronda en vivo
+          database.ref(`rooms/${room}/gameState`).on('value', (snapshot) => {
+            showSyncIndicator();
+            gameState = snapshot.val();
             renderSpectator();
           });
 

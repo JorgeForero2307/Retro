@@ -31,11 +31,11 @@
       <article class="card quick-guide">
         <h3>🎮 Cómo empezar</h3>
         <ol>
-          <li>Agrega jugadores en el cuadro izquierdo</li>
+          <li>Ingresa tu nombre para unirte al juego</li>
           <li>Selecciona categoría en el <strong>TABLERO</strong> (arriba a la derecha)</li>
           <li>Usa <strong>flechas</strong> para navegar o <strong>haz clic</strong></li>
-          <li>Presiona <strong>Enter</strong> para abrir desafío</li>
-          <li>¡Responde y compite!</li>
+          <li>Presiona <strong>Enter</strong> para abrir el desafío</li>
+          <li>¡Todos responden a la vez! Sé el más rápido y acertado</li>
         </ol>
       </article>
       <article class="card">
@@ -46,11 +46,7 @@
 
     <section class="input-section">
       <div class="box players-box">
-        <h2>👥 Tu Equipo</h2>
-        <div class="row">
-          <input id="playerName" type="text" placeholder="Nombre del jugador..." />
-          <button id="addPlayerBtn">+</button>
-        </div>
+        <h2>👥 Jugadores en Sala</h2>
         <ul id="playerList" class="player-list"></ul>
       </div>
 
@@ -64,10 +60,6 @@
     <section class="status-section">
       <div class="box scoreboard-box">
         <h2>Marcador del equipo</h2>
-        <label for="activePlayerSelect">Jugador activo</label>
-        <select id="activePlayerSelect" class="player-select">
-          <option value="">Selecciona jugador activo</option>
-        </select>
         <div id="scoreboard" class="scoreboard"></div>
         <div id="leaderboard" class="leaderboard"></div>
       </div>
@@ -84,10 +76,16 @@
         <div id="challengeContent"></div>
         <button id="submitAnswersBtn" class="primary-btn">Enviar respuestas</button>
       </div>
-      <div class="box results-box hidden" id="resultsBox">
-        <h2>Resultados</h2>
-        <p id="resultsText"></p>
-        <button id="resetBtn">Reiniciar desafío</button>
+      <div class="box submissions-box" id="submissionsBox">
+        <h2>Respuestas de la Ronda</h2>
+        <ul id="submissionsList" class="player-list"></ul>
+        <div class="results-box-container" style="margin-top: 16px;">
+          <div class="results-box hidden" id="resultsBox" style="background: rgba(16, 185, 129, 0.1); border: 2px solid rgba(16, 185, 129, 0.3); padding: 14px; border-radius: 10px;">
+            <h2>Resultados individuales</h2>
+            <p id="resultsText" style="margin-top: 8px;"></p>
+          </div>
+        </div>
+        <button id="resetBtn" class="primary-btn" style="background: linear-gradient(120deg, #38bdf8, #0ea5e9); color: #0f172a; margin-top: 16px;">Siguiente Ronda</button>
       </div>
     </section>
 
@@ -114,6 +112,18 @@
       <div class="modal-actions">
         <button id="saveSyncSettingsBtn" class="primary-btn" style="margin-top: 0;">Guardar y Conectar</button>
         <button id="disconnectSyncBtn" class="secondary-btn">Volver a Modo Local</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pantalla de Bienvenida (Login) -->
+  <div id="welcomeScreen" class="welcome-screen">
+    <div class="welcome-box">
+      <h2>⚡ ¡Bienvenido al Juego de Habilidades!</h2>
+      <p>Para entrar a competir con tu equipo en tiempo real, escribe tu nombre o apodo:</p>
+      <div class="welcome-row">
+        <input type="text" id="joinPlayerName" placeholder="Tu nombre..." maxLength="15" />
+        <button id="joinGameBtn" class="primary-btn">Comenzar</button>
       </div>
     </div>
   </div>
