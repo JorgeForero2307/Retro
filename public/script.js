@@ -49,6 +49,7 @@ let boardPosition = { row: 1, col: 1 };
 let currentQuestions = [];
 let answerSubmitted = false;
 let challengeStartTime = 0;
+let loadedChallengeStartTime = 0;
 
 // Variables de Estado de Firebase
 let isMultiplayerActive = false;
@@ -307,6 +308,7 @@ function clearChallenge() {
   submitAnswersBtn.style.cursor = 'pointer';
   submitAnswersBtn.classList.remove('hidden');
   answerSubmitted = false;
+  loadedChallengeStartTime = 0;
 }
 
 function loadCategory() {
@@ -350,6 +352,8 @@ function loadCategory() {
     q.appendChild(inpElement);
     challengeContent.appendChild(q);
   });
+
+  loadedChallengeStartTime = challengeStartTime;
 }
 
 function normalizeAnswer(value) {
@@ -622,6 +626,7 @@ function setupRoomListeners() {
       clearChallenge();
       currentCategory = '';
       currentQuestions = [];
+      loadedChallengeStartTime = 0;
       renderBoard();
       return;
     }
@@ -650,7 +655,11 @@ function setupRoomListeners() {
         answerSubmitted = false;
         clearChallenge();
       }
-      loadCategory();
+      
+      // SÓLO recargar la categoría si es un nuevo desafío (evita borrar inputs activos de otros jugadores)
+      if (loadedChallengeStartTime !== challengeStartTime) {
+        loadCategory();
+      }
     }
 
     // Renderizar entregas de la ronda
