@@ -657,6 +657,18 @@ footer {
   transform: translateY(-1px);
 }
 
+#closeRoomBtn {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+#closeRoomBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
 .share-btn {
   background: linear-gradient(120deg, #10b981, #059669);
   color: white;
