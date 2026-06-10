@@ -837,7 +837,7 @@ function disconnectSync() {
 }
 
 function generateRandomRoom() {
-  const randomId = 'CMG-' + Math.floor(1000 + Math.random() * 9000);
+  const randomId = 'Sala-' + Math.floor(1000 + Math.random() * 9000);
   roomNameInput.value = randomId;
 }
 
