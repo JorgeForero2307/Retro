@@ -30,6 +30,10 @@ const roomNameInput = document.getElementById('roomNameInput');
 const randomRoomBtn = document.getElementById('randomRoomBtn');
 const saveSyncSettingsBtn = document.getElementById('saveSyncSettingsBtn');
 const disconnectSyncBtn = document.getElementById('disconnectSyncBtn');
+const modalTitle = document.getElementById('modalTitle');
+const modalDescription = document.getElementById('modalDescription');
+const modalInputLabel = document.getElementById('modalInputLabel');
+const joinRoomBtn = document.getElementById('joinRoomBtn');
 
 // Elementos de la Pantalla de Bienvenida y Entregas
 const welcomeScreen = document.getElementById('welcomeScreen');
@@ -529,9 +533,11 @@ function updateSyncUI(status, text) {
   if (status === 'connected') {
     shareLinkBtn.classList.remove('hidden');
     openSettingsBtn.textContent = "⚙️ Ajustes Sala";
+    if (joinRoomBtn) joinRoomBtn.classList.add('hidden');
   } else {
     shareLinkBtn.classList.add('hidden');
-    openSettingsBtn.textContent = "🔌 Configurar Conexión";
+    openSettingsBtn.textContent = "➕ Crear Sala";
+    if (joinRoomBtn) joinRoomBtn.classList.remove('hidden');
   }
 }
 
@@ -770,6 +776,35 @@ if (spectatorBtnMain) spectatorBtnMain.addEventListener('click', openSpectatorMo
 openSettingsBtn.addEventListener('click', () => {
   syncSettingsModal.classList.remove('hidden');
   roomNameInput.value = localStorage.getItem('roomName') || '';
+  
+  if (isMultiplayerActive) {
+    if (modalTitle) modalTitle.textContent = "⚙️ Ajustes de Sala";
+    if (modalDescription) modalDescription.textContent = "Estás conectado a la sala en tiempo real. Puedes cambiar de sala o desconectarte.";
+    if (modalInputLabel) modalInputLabel.textContent = "Nombre de la Sala actual:";
+    randomRoomBtn.classList.remove('hidden');
+    saveSyncSettingsBtn.textContent = "Guardar y Conectar";
+  } else {
+    if (modalTitle) modalTitle.textContent = "➕ Crear Nueva Sala";
+    if (modalDescription) modalDescription.textContent = "Genera un código aleatorio o ingresa un nombre para crear una nueva sala.";
+    if (modalInputLabel) modalInputLabel.textContent = "Nombre de la Sala a crear:";
+    randomRoomBtn.classList.remove('hidden');
+    saveSyncSettingsBtn.textContent = "Crear y Conectar";
+    if (!roomNameInput.value) {
+      generateRandomRoom();
+    }
+  }
+});
+
+joinRoomBtn.addEventListener('click', () => {
+  syncSettingsModal.classList.remove('hidden');
+  roomNameInput.value = '';
+  roomNameInput.placeholder = "Código de la sala...";
+  
+  if (modalTitle) modalTitle.textContent = "🚪 Ingresar a Sala";
+  if (modalDescription) modalDescription.textContent = "Escribe el código de la sala de tu equipo para ingresar a jugar.";
+  if (modalInputLabel) modalInputLabel.textContent = "Código de la Sala:";
+  randomRoomBtn.classList.add('hidden');
+  saveSyncSettingsBtn.textContent = "Ingresar";
 });
 
 closeModalBtn.addEventListener('click', () => {

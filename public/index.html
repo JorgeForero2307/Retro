@@ -24,7 +24,8 @@
       <div class="status-actions">
         <button id="shareLinkBtn" class="share-btn hidden">🔗 Compartir Enlace</button>
         <button id="closeRoomBtn" class="action-btn hidden">🔒 Cerrar Sala</button>
-        <button id="openSettingsBtn" class="action-btn">🔌 Configurar Conexión</button>
+        <button id="joinRoomBtn" class="action-btn">🚪 Ingresar a Sala</button>
+        <button id="openSettingsBtn" class="action-btn">➕ Crear Sala</button>
       </div>
     </div>
 
@@ -99,11 +100,11 @@
   <div id="syncSettingsModal" class="modal hidden">
     <div class="modal-content">
       <span id="closeModalBtn" class="close-modal-btn">&times;</span>
-      <h2>🔌 Configurar Multijugador</h2>
-      <p class="modal-description">Ingresa el nombre de la sala para conectarte en tiempo real con tu equipo.</p>
+      <h2 id="modalTitle">🔌 Configurar Multijugador</h2>
+      <p id="modalDescription" class="modal-description">Ingresa el nombre de la sala para conectarte en tiempo real con tu equipo.</p>
       
       <div class="form-group">
-        <label for="roomNameInput">Nombre de la Sala (Room):</label>
+        <label id="modalInputLabel" for="roomNameInput">Nombre de la Sala (Room):</label>
         <div class="row">
           <input type="text" id="roomNameInput" placeholder="Ej: CMG-Team" />
           <button id="randomRoomBtn" type="button" style="background: var(--accent); color: var(--bg);">Generar</button>
