@@ -48,7 +48,7 @@ let roomId = '';
 let myPlayerName = localStorage.getItem('myPlayerName') || '';
 let database = null;
 const firebaseConfig = {
-  apiKey: "AIzaSyD0ani2ByTvLboCXVdMGcdEbOAg7qrrdaQ",
+  apiKey: atob("QUl6YVN5RDBhbmkyQnlUdkxib0NYVm1HY2RFYk9BZzdxdXJyZGFR"),
   authDomain: "retro-e9a27.firebaseapp.com",
   projectId: "retro-e9a27",
   databaseURL: "https://retro-e9a27-default-rtdb.firebaseio.com",
